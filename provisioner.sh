@@ -20,7 +20,7 @@ apt-get update
 
 }
 
-apt-get -y install percona-toolkit 
+apt-get -y install percona-toolkit git-core
 
 # install mysql-sandbox and percona-server-5.5 binary
 
@@ -34,6 +34,7 @@ test -d /usr/local/mysql-sandbox/ || {
     make install
     echo "export PATH=$PATH:/usr/local/mysql-sandbox/bin">>/etc/bash.bashrc
     rm -f /tmp/mysql-sandbox.tar.gz
+    popd
 }
 
 test -d /usr/local/percona-server/ || {
@@ -41,5 +42,14 @@ test -d /usr/local/percona-server/ || {
     tar xzvf /tmp/percona-server.tar.gz -C /usr/local --transform "s/Percona-Server-5.5.27-rel28.1-296.Linux.x86_64/percona-server/g"
     echo "export PATH=$PATH:/usr/local/percona-server/bin">>/etc/bash.bashrc
     rm -f /tmp/percona-server.tar.gz
+}
+
+test -d /usr/local/demos/ || {
+    pushd /tmp/
+    git clone https://github.com/fipar/vagrant_pt_demos
+    cp -rv vagrant_pt_demos/demos /usr/local 
+    echo "export PATH=$PATH:/usr/local/demos/">>/etc/bash.bashrc
+    rm -rf /tmp/vagrant_pt_demos
+    popd
 }
 

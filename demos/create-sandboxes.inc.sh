@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # set DEMOS_HOME to the place where the demos/ subdirectory lives in your host. As I plan to run this from that dir, I'll just set it to $PWD
-export DEMOS_HOME=$PWD
+export DEMOS_HOME=/usr/local/demos
 # change this if you want, this is where sandboxes will be created
 export SANDBOXES_HOME="$DEMOS_HOME/sb";
 # set this to whatever mysql version you want to use. This should be created by untarring a binary download from any MySQL provider. 

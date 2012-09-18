@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. `pwd`/create-sandboxes.inc.sh;
+. /usr/local/demos/create-sandboxes.inc.sh;
 [ -d "$DEMOS_HOME" ] || mkdir -v $DEMOS_HOME;
 # demos_list="pt-find pt-kill pt-tcp-model pt-ioprofile pt-pmp pt-align pt-log-player pt-online-schema-change pt-mysql-summary pt-config-diff pt-variable-advisor pt-duplicate-key-checker pt-mext"
 

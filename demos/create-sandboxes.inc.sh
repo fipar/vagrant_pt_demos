@@ -83,8 +83,8 @@ demo_recipes_boxes_set_replication () {
 # $1 sandbox name
 load_sample_databases() {
 # https://launchpad.net/test-db/
-    $SAMPLES_DIR = $DEMOS_HOME/assets/sample-databases/
-    $SB = $SANDBOXES_HOME/$1/use
+    SAMPLES_DIR=$DEMOS_HOME/assets/sample-databases/
+    SB=$SANDBOXES_HOME/$1/use
 
 [ -x $SB ] || die "Can't find ./use script for sandbox $1"
 

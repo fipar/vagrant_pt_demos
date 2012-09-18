@@ -88,6 +88,9 @@ load_sample_databases() {
 
 [ -x $SB ] || die "Can't find ./use script for sandbox $1"
 
+# I'm assuming that if the employees_db-full file is there, the others are too
+[ -f $SAMPLES_DIR/employees_db-full-1.0.6.tar.bz2 ] || {
+
 [ -d "$SAMPLES_DIR" ] || mkdir -p $SAMPLES_DIR;
     cd $SAMPLES_DIR;
 
@@ -101,7 +104,7 @@ load_sample_databases() {
     gunzip world_innodb.sql.gz;
     tar xzvf sakila-db.tar.gz;
     
-
+}
     # needs to be there to use employees.sql 
     cd $SAMPLES_DIR/employees_db/;
     $SB < $SAMPLES_DIR/employees_db/employees.sql;

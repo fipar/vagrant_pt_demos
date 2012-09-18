@@ -20,7 +20,7 @@ apt-get update
 
 }
 
-apt-get -y install percona-toolkit git-core
+apt-get -y install percona-toolkit git-core libaio1
 
 # install mysql-sandbox and percona-server-5.5 binary
 

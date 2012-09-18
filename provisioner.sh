@@ -39,7 +39,7 @@ test -d /usr/local/mysql-sandbox/ || {
 
 test -d /usr/local/percona-server/ || {
     wget http://www.percona.com/redir/downloads/Percona-Server-5.5/Percona-Server-5.5.27-28.1/binary/linux/x86_64/Percona-Server-5.5.27-rel28.1-296.Linux.x86_64.tar.gz -O /tmp/percona-server.tar.gz
-    tar xzvf /tmp/percona-server.tar.gz -C /usr/local --transform "s/Percona-Server-5.5.27-rel28.1-296.Linux.x86_64/percona-server/g"
+    tar xzvf /tmp/percona-server.tar.gz -C /usr/local --transform "s/Percona-Server-5.5.27-rel28.1-296.Linux.x86_64/5.5.27/g"
     echo "export PATH=$PATH:/usr/local/percona-server/bin">>/etc/bash.bashrc
     rm -f /tmp/percona-server.tar.gz
 }
@@ -48,6 +48,7 @@ test -d /usr/local/demos/ || {
     pushd /tmp/
     git clone https://github.com/fipar/vagrant_pt_demos
     cp -rv vagrant_pt_demos/demos /usr/local 
+    chown -R vagrant.vagrant /usr/local/demos/
     echo "export PATH=$PATH:/usr/local/demos/">>/etc/bash.bashrc
     rm -rf /tmp/vagrant_pt_demos
     popd

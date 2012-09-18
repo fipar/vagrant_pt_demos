@@ -5,7 +5,6 @@
 # demos_list="pt-find pt-kill pt-tcp-model pt-ioprofile pt-pmp pt-align pt-log-player pt-online-schema-change pt-mysql-summary pt-config-diff pt-variable-advisor pt-duplicate-key-checker pt-mext"
 
 
-
 # this works fine, but it's painfully slow to test
 #[ -d "$SANDBOXES_HOME" ] && (for i in `ls $SANDBOXES_HOME`; do { 
 #    $SANDBOXES_HOME/$i/stop; echo "stopped $i";
@@ -27,8 +26,11 @@ create_demo_recipes_box "master-passive" 13307 log-slave-updates read-only=1;
 create_demo_recipes_box "slave-1" 13308 read-only=1;
 create_demo_recipes_box "slave-2" 13309 read-only=1;
 
-for i in `ls $SANDBOXES_HOME`; do { 
-    $SANDBOXES_HOME/$i/start; 
-} done;
+for i in `ls $SANDBOXES_HOME`; do
+    $SANDBOXES_HOME/$i/start
+    load_sample_databases $i
+done
 
-demo_recipes_boxes_set_replication;
+
+demo_recipes_boxes_set_replication
+

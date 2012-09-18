@@ -37,7 +37,7 @@ test -d /usr/local/mysql-sandbox/ || {
     popd
 }
 
-test -d /usr/local/percona-server/ || {
+test -d /usr/local/5.5.27/ || {
     wget http://www.percona.com/redir/downloads/Percona-Server-5.5/Percona-Server-5.5.27-28.1/binary/linux/x86_64/Percona-Server-5.5.27-rel28.1-296.Linux.x86_64.tar.gz -O /tmp/percona-server.tar.gz
     tar xzvf /tmp/percona-server.tar.gz -C /usr/local --transform "s/Percona-Server-5.5.27-rel28.1-296.Linux.x86_64/5.5.27/g"
     echo "export PATH=$PATH:/usr/local/percona-server/bin">>/etc/bash.bashrc

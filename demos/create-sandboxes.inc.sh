@@ -1,4 +1,5 @@
 #!/bin/bash
+# Authored by Marcos Albe (markus.albe@gmail.com). Minor edits by Fernando Ipar (fipar@acm.org)
 
 # set DEMOS_HOME to the place where the demos/ subdirectory lives in your host. As I plan to run this from that dir, I'll just set it to $PWD
 export DEMOS_HOME=/usr/local/demos
@@ -105,11 +106,15 @@ load_sample_databases() {
     tar xzvf sakila-db.tar.gz;
     
 }
-    # needs to be there to use employees.sql 
-    cd $SAMPLES_DIR/employees_db/;
-    $SB < $SAMPLES_DIR/employees_db/employees.sql;
-    $SB < $SAMPLES_DIR/sakila-db/sakila-schema.sql;
-    $SB < $SAMPLES_DIR/sakila-db/sakila-data.sql;
-    $SB < $SAMPLES_DIR/world.sql;
-    $SB < $SAMPLES_DIR/world_innodb.sql;
+
+    # Once again, assuming that if the employees data dir is there, then the data is present. 
+    [ -d $SANDBOXES_HOME/$1/data/employees/ ] || {
+        # needs to be there to use employees.sql 
+	cd $SAMPLES_DIR/employees_db/
+	$SB < $SAMPLES_DIR/employees_db/employees.sql
+	$SB < $SAMPLES_DIR/sakila-db/sakila-schema.sql
+	$SB < $SAMPLES_DIR/sakila-db/sakila-data.sql
+	$SB < $SAMPLES_DIR/world.sql
+	$SB < $SAMPLES_DIR/world_innodb.sql
+    }
 }

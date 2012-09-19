@@ -1,4 +1,5 @@
 #!/bin/bash
+# Authored by Marcos Albe (markus.albe@gmail.com). Minor edits by Fernando Ipar (fipar@acm.org)
 
 . /usr/local/demos/create-sandboxes.inc.sh;
 [ -d "$DEMOS_HOME" ] || mkdir -v $DEMOS_HOME;

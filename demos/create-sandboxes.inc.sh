@@ -54,6 +54,22 @@ create_demo_recipes_box () {
         $extra
 }
 
+
+backup_datadir()
+{
+    [ -d "$SANDBOXES_HOME" ] && {
+	cp -rv $SANDBOXES_HOME/master-active/data/ $DEMOS_HOME/assets/loaded-datadir/
+    }
+}
+
+# $1 : sandbox we want to restore
+restore_datadir()
+{
+    [ -n "$1" ] || die "I need a sandbox name to restore"
+    cp -rv $DEMOS_HOME/assets/loaded-datadir/ $SANDBOXES_HOME/$1/data/ 
+}
+
+
 demo_recipes_boxes_reset_data_and_replication () {
     if [ -d "$SANDBOXES_HOME" ];
     then

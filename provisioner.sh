@@ -1,5 +1,6 @@
 #!/bin/bash
 # provisioner for the percona-toolkit-demos Vagrant box
+# Fernando Ipar - fipar@acm.org
 
 # set up Percona repo and install percona-toolkit
 
@@ -54,4 +55,6 @@ test -d /usr/local/demos/ || {
     popd
 }
 
-su - vagrant -c "/usr/local/demos/create-sandboxes.sh"
+# if at least one sandbox exists, I assume all of them do
+[ -d /usr/local/demos/sb/master-active/ ] || su - vagrant -c "/usr/local/demos/create-sandboxes.sh"
+

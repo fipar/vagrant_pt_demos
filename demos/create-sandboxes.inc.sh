@@ -56,9 +56,7 @@ create_demo_box () {
 reinit_instances()
 {
     for i in `ls $SANDBOXES_HOME`; do
-	$SANDBOXES_HOME/$i/stop
 	restore_datadir $i
-	$SANDBOXES_HOME/$i/start
     done    
 }
 

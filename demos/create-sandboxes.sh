@@ -13,9 +13,7 @@
 #    $SANDBOXES_HOME/$i/stop; echo "stopped $i";
 #} done;);
 
-echo "Killing any remaining mysqld instance"
-killall --verbose -9 mysqld mysqld_safe
-echo "Done"
+kill_mysql
 
 rm -rf $SANDBOXES_HOME
 echo "cleared $SANDBOXES_HOME"

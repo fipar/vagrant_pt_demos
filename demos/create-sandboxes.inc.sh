@@ -14,6 +14,13 @@ export LANGUAGE=en_US.UTF-8
 
 export PTBIN="$DEMOS_HOME/bin/";
 
+kill_mysql()
+{
+    echo "Killing any remaining mysqld instance"
+    killall -9 mysqld mysqld_safe 2>/dev/null
+    echo "Done"
+}
+
 # exit with a failure error code and a message that is printed to stderr
 die() {
     echo $* >&2
@@ -46,8 +53,8 @@ create_demo_box () {
         --my_clause="binlog-format=STATEMENT" \
         --my_clause="skip-slave-start" \
         --my_clause="report-host=127.0.0.1" \
-        --my_clause="report-port=$2" \
-        --my_clause="server-id=$2" \
+        --my_clause="report-port=$box_port" \
+        --my_clause="server-id=$box_port" \
         $extra
 }
 
@@ -71,29 +78,42 @@ backup_datadir()
     }
 }
 
-# restore a sandbox's datadir
+# restore a sandbox's datadir, then starts it
 # $1 : sandbox we want to restore
 restore_datadir()
 {
     [ -n "$1" ] || die "I need a sandbox name to restore"
     [ -d "$SANDBOXES_HOME" ] && {
-	$SANDBOXES_HOME/$1/stop
+	[ -d /proc/$(cat $SANDBOXES_HOME/$1/data/mysql_sandbox*.pid 2>/dev/null >/dev/null) ] && $SANDBOXES_HOME/$1/stop
 	cp -rv $DEMOS_HOME/assets/loaded-datadir/$1/data/* $SANDBOXES_HOME/$1/data/ 
-	$SANDBOXES_HOME/$1/start
+	$SANDBOXES_HOME/$1/restart
     }
 }
 
 
+# stops a sandbox and clears its datadir
+# $1 : sandbox
+zap_datadir()
+{
+    [ -n "$1" ] || die "I need a sandbox name to zap"    
+    [ -d $SANDBOXES_HOME ] && {
+	[ -d /proc/$(cat $SANDBOXES_HOME/$1/data/mysql_sandbox*.pid 2>/dev/null >/dev/null) ] && $SANDBOXES_HOME/$1/stop
+	rm -rf $SANDBOXES_HOME/$1/data/*
+    }
+}
+
+# reinitializes all sandboxes for replication tests
 demo_recipes_boxes_reset_data_and_replication () {
     if [ -d "$SANDBOXES_HOME" ];
     then
-        killall --verbose -9 mysqld mysqld_safe; echo "killed any remaining mysqld instance";
+        kill_mysql
         for i in `ls $SANDBOXES_HOME`; do {
-            # $SANDBOXES_HOME/$i/stop; echo "stopped $i";
-            rm -rf $SANDBOXES_HOME/$i/data/; echo "rm -rf $SANDBOXES_HOME/$i/data/" 
-            cp -a $DEMOS_HOME/assets/loaded-datadir/ $SANDBOXES_HOME/$i/data/; echo "restored binary backup ($DEMOS_HOME/assets/loaded-datadir/)"
-            $SANDBOXES_HOME/$i/start; echo "";
-
+	    echo -n "initializing instance $i ... "
+	    zap_datadir $i
+	    echo "done"
+	    echo -n "restoring $i from binary backup ... "
+	    restore_datadir $i
+	    echo "done"
         } done;
         demo_recipes_boxes_set_replication;
     else
@@ -101,14 +121,16 @@ demo_recipes_boxes_reset_data_and_replication () {
     fi
 }
 
+# initializes slave threads on all sandboxes
 demo_recipes_boxes_set_replication () {
+    STOP_SLAVE_SQL="SLAVE STOP;"
     CHANGE_MASTER_COMMON_SQL="CHANGE MASTER TO MASTER_HOST='127.0.0.1', MASTER_USER='demo', MASTER_PASSWORD='demo', MASTER_LOG_POS=107"
     START_SLAVE_SQL="SLAVE START; SELECT SLEEP(0.5); SHOW SLAVE STATUS\G SHOW MASTER STATUS; SHOW SLAVE HOSTS;"
 
-    $SANDBOXES_HOME/master-active/use -v -t -e "$CHANGE_MASTER_COMMON_SQL, MASTER_LOG_FILE='master-passive-bin.000001', MASTER_PORT=13307;  $START_SLAVE_SQL";
-    $SANDBOXES_HOME/master-passive/use -v -t -e "$CHANGE_MASTER_COMMON_SQL, MASTER_LOG_FILE='master-active-bin.000001', MASTER_PORT=13306;  $START_SLAVE_SQL";
-    $SANDBOXES_HOME/slave-1/use -v -t -e "$CHANGE_MASTER_COMMON_SQL, MASTER_LOG_FILE='master-active-bin.000001', MASTER_PORT=13306;  $START_SLAVE_SQL";
-    $SANDBOXES_HOME/slave-2/use -v -t -e "$CHANGE_MASTER_COMMON_SQL, MASTER_LOG_FILE='master-passive-bin.000001', MASTER_PORT=13307;  $START_SLAVE_SQL";
+    $SANDBOXES_HOME/master-active/use -v -t -e "$STOP_SLAVE_SQL $CHANGE_MASTER_COMMON_SQL, MASTER_LOG_FILE='master-passive-bin.000001', MASTER_PORT=13307;  $START_SLAVE_SQL";
+    $SANDBOXES_HOME/master-passive/use -v -t -e "$STOP_SLAVE_SQL $CHANGE_MASTER_COMMON_SQL, MASTER_LOG_FILE='master-active-bin.000001', MASTER_PORT=13306;  $START_SLAVE_SQL";
+    $SANDBOXES_HOME/slave-1/use -v -t -e "$STOP_SLAVE_SQL $CHANGE_MASTER_COMMON_SQL, MASTER_LOG_FILE='master-active-bin.000001', MASTER_PORT=13306;  $START_SLAVE_SQL";
+    $SANDBOXES_HOME/slave-2/use -v -t -e "$STOP_SLAVE_SQL $CHANGE_MASTER_COMMON_SQL, MASTER_LOG_FILE='master-passive-bin.000001', MASTER_PORT=13307;  $START_SLAVE_SQL";
 }
 
 # loads the sample databases into a sandbox

@@ -54,3 +54,4 @@ test -d /usr/local/demos/ || {
     popd
 }
 
+su - vagrant -c "/usr/local/demos/create-sandboxes.sh"

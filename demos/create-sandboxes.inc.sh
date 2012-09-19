@@ -95,10 +95,10 @@ load_sample_databases() {
 [ -d "$SAMPLES_DIR" ] || mkdir -p $SAMPLES_DIR;
     cd $SAMPLES_DIR;
 
-    wget -c https://launchpad.net/test-db/employees-db-1/1.0.6/+download/employees_db-full-1.0.6.tar.bz2;
-    wget -c http://downloads.mysql.com/docs/world.sql.gz;
-    wget -c http://downloads.mysql.com/docs/world_innodb.sql.gz;
-    wget -c http://downloads.mysql.com/docs/sakila-db.tar.gz;
+    wget --progress=bar -c https://launchpad.net/test-db/employees-db-1/1.0.6/+download/employees_db-full-1.0.6.tar.bz2;
+    wget --progress=bar -c http://downloads.mysql.com/docs/world.sql.gz;
+    wget --progress=bar -c http://downloads.mysql.com/docs/world_innodb.sql.gz;
+    wget --progress=bar -c http://downloads.mysql.com/docs/sakila-db.tar.gz;
 
     tar xjvf employees_db-full-1.0.6.tar.bz2;
     gunzip world.sql.gz;

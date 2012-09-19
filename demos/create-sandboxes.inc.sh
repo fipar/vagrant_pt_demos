@@ -9,43 +9,40 @@ export SANDBOXES_HOME="$DEMOS_HOME/sb";
 export BINARY_BASE="/usr/local"
 # you shouldn't need to change anything below this comment
 
+export LC_ALL=en_US.UTF-8
+export LANGUAGE=en_US.UTF-8
+
 export PTBIN="$DEMOS_HOME/bin/";
 
+# exit with a failure error code and a message that is printed to stderr
 die() {
     echo $* >&2
     exit 1
 }
 
-create_demo_tutorial_box () {
-mkdr -p $DEMOS_HOME/assets/servers/5.5
-make_sandbox $DEMOS_HOME/assets/servers/ \
-    --upper_directory="$SANDBOXES_HOME" --sandbox_directory="demo-tutorial" --no_ver_after_name \
-    --datadir_from="dir:${DEMOS_HOME}/assets/loaded-datadir/" \
-    --no_show --sandbox_port=3301 --db_user=demo --db_password=demo \
-    --my_clause="innodb_buffer_pool_size=1024M" \
-    --my_clause="innodb_log_file_size=64M" \
-    --my_clause="innodb_file_per_table" \
-    --my_clause="innodb_flush_log_at_trx_commit=2" \
-    $MYSQL_BINARY_INSTALL
-}
-
+# creates a demo mysql sandbox instance
 # $1 = box name
 # $2 = port
-# $3 = my_clause
-create_demo_recipes_box () {
+# $3, ... = my_clause
+create_demo_box () {
+    box_name=$1
+    box_port=$2
+    [ -z "$box_name" -o -z "$box_port" ] && die "I need at least a box name ($1) and port ($2) to continue"
+    shift; shift
     extra="";
-    [ -z "$3" ] || extra="--my_clause=${3}";
-    [ -z "$4" ] || extra="$extra --my_clause=${4}";
-    [ -z "$5" ] || extra="$extra --my_clause=${5}";
+    while [ -n "$1" ]; do
+	extra="$extra --my_clause=${1}"
+	shift
+    done
     make_sandbox  5.5.27 -- \
-        --upper_directory="$SANDBOXES_HOME" --sandbox_directory="$1" --no_ver_after_name \
-        --no_show --sandbox_port=$2 --db_user=demo --db_password=demo --repl_user=demo --repl_password=demo \
+        --upper_directory="$SANDBOXES_HOME" --sandbox_directory="$box_name" --no_ver_after_name \
+        --no_show --sandbox_port=$box_port --db_user=demo --db_password=demo --repl_user=demo --repl_password=demo \
         --my_clause="innodb_buffer_pool_size=128M" \
         --my_clause="innodb_log_file_size=64M" \
         --my_clause="innodb_file_per_table" \
         --my_clause="innodb_fast_shutdown=2" \
         --my_clause="innodb_flush_log_at_trx_commit=2" \
-        --my_clause="log-bin=$1-bin" \
+        --my_clause="log-bin=${box_name}-bin" \
         --my_clause="binlog-format=STATEMENT" \
         --my_clause="skip-slave-start" \
         --my_clause="report-host=127.0.0.1" \
@@ -55,18 +52,37 @@ create_demo_recipes_box () {
 }
 
 
+# reinitializes existing sandboxes (using the backed up datadir)
+reinit_instances()
+{
+    for i in `ls $SANDBOXES_HOME`; do
+	$SANDBOXES_HOME/$i/stop
+	restore_datadir $i
+	$SANDBOXES_HOME/$i/start
+    done    
+}
+
+# backs up a sandbox's datadir
+# $1 : sandbox we want to backup
 backup_datadir()
 {
+    [ -n "$1" ] || die "I need a sandbox name to restore"
     [ -d "$SANDBOXES_HOME" ] && {
-	cp -rv $SANDBOXES_HOME/master-active/data/ $DEMOS_HOME/assets/loaded-datadir/
+	mkdir -p $DEMOS_HOME/assets/loaded-datadir/$1/
+	cp -rv $SANDBOXES_HOME/$1/data/ $DEMOS_HOME/assets/loaded-datadir/$1
     }
 }
 
+# restore a sandbox's datadir
 # $1 : sandbox we want to restore
 restore_datadir()
 {
     [ -n "$1" ] || die "I need a sandbox name to restore"
-    cp -rv $DEMOS_HOME/assets/loaded-datadir/ $SANDBOXES_HOME/$1/data/ 
+    [ -d "$SANDBOXES_HOME" ] && {
+	$SANDBOXES_HOME/$1/stop
+	cp -rv $DEMOS_HOME/assets/loaded-datadir/$1/data/* $SANDBOXES_HOME/$1/data/ 
+	$SANDBOXES_HOME/$1/start
+    }
 }
 
 
@@ -83,7 +99,7 @@ demo_recipes_boxes_reset_data_and_replication () {
         } done;
         demo_recipes_boxes_set_replication;
     else
-        $DEMOS_HOME/create-sandboxes.sh;A
+        $DEMOS_HOME/create-sandboxes.sh;
     fi
 }
 
@@ -97,6 +113,7 @@ demo_recipes_boxes_set_replication () {
     $SANDBOXES_HOME/slave-2/use -v -t -e "$CHANGE_MASTER_COMMON_SQL, MASTER_LOG_FILE='master-passive-bin.000001', MASTER_PORT=13307;  $START_SLAVE_SQL";
 }
 
+# loads the sample databases into a sandbox
 # $1 sandbox name
 load_sample_databases() {
 # https://launchpad.net/test-db/

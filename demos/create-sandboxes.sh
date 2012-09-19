@@ -1,5 +1,7 @@
 #!/bin/bash
 # Authored by Marcos Albe (markus.albe@gmail.com). Minor edits by Fernando Ipar (fipar@acm.org)
+# Creates the sandboxes used for demos (stopping them and removing their contents first if needed), loading the sample datasets into them. 
+# DISCLAIMER: This SIGKILLs any running mysqld instance, removes datadirs, and has no test cases. Use only on test systems. 
 
 . /usr/local/demos/create-sandboxes.inc.sh;
 [ -d "$DEMOS_HOME" ] || mkdir -v $DEMOS_HOME;
@@ -11,28 +13,24 @@
 #    $SANDBOXES_HOME/$i/stop; echo "stopped $i";
 #} done;);
 
-# [ -d "$DEMOS_HOME/demo-tutorial/" ] && $DEMOS_HOME/demo-tutorial/stop;
-killall --verbose -9 mysqld mysqld_safe; echo "killed any remaining mysqld instance";
-rm -rf $SANDBOXES_HOME; echo "cleared $SANDBOXES_HOME";
-mkdir -v $SANDBOXES_HOME; echo "created $SANDBOXES_HOME";
+echo "Killing any remaining mysqld instance"
+killall --verbose -9 mysqld mysqld_safe
+echo "Done"
 
+rm -rf $SANDBOXES_HOME
+echo "cleared $SANDBOXES_HOME"
 
+mkdir -v $SANDBOXES_HOME
+echo "created $SANDBOXES_HOME"
 
-# rm -rfv $DEMOS_HOME/demo-tutorial;
-# create_demo_tutorial_box
-# $DEMOS_HOME/demo-tutorial/start;
-
-create_demo_recipes_box "master-active" 13306 log-slave-updates;
-create_demo_recipes_box "master-passive" 13307 log-slave-updates read-only=1;
-create_demo_recipes_box "slave-1" 13308 read-only=1;
-create_demo_recipes_box "slave-2" 13309 read-only=1;
+create_demo_box "master-active" 13306 log-slave-updates;
+create_demo_box "master-passive" 13307 log-slave-updates read-only=1;
+create_demo_box "slave-1" 13308 read-only=1;
+create_demo_box "slave-2" 13309 read-only=1;
 
 for i in `ls $SANDBOXES_HOME`; do
     $SANDBOXES_HOME/$i/start
     load_sample_databases $i
+    backup_datadir $i
 done
 
-
-demo_recipes_boxes_set_replication
-
-backup_datadir

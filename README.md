@@ -16,6 +16,7 @@ Usage
 
 
 Use should be as simple as: 
+
     cd <dir-where-you-cloned-the-repo>
     vagrant up
 

@@ -10,14 +10,14 @@ gpg --list-keys|grep mysql-dev@percona.com >/dev/null || {
 }
 
 grep 'repo.percona.com' /etc/apt/sources.list >/dev/null || {
-    cat <<EOF>> /etc/apt/sources.list
+    cat << EOF >> /etc/apt/sources.list
 
 deb http://repo.percona.com/apt lucid main
 deb-src http://repo.percona.com/apt lucid main
 
 EOF
 
-apt-get update
+    apt-get update
 
 }
 
@@ -28,12 +28,15 @@ apt-get -y install percona-toolkit git-core libaio1
 test -d /usr/local/mysql-sandbox/ || {
     wget https://launchpad.net/mysql-sandbox/mysql-sandbox-3/mysql-sandbox-3/+download/MySQL-Sandbox-3.0.25.tar.gz -O /tmp/mysql-sandbox.tar.gz --progress=bar
     tar xzvf /tmp/mysql-sandbox.tar.gz -C /usr/local/ --transform "s/MySQL-Sandbox-3.0.25/mysql-sandbox/g"
-    pushd /usr/local/mysql-sandbox/ 
-    perl Makefile.PL
+    pushd /usr/local/mysql-sandbox/
+    perl Makefile.PL PREFIX=/usr/local/mysql-sandbox
     make
     make test
     make install
     echo 'export PATH=$PATH:/usr/local/mysql-sandbox/bin'>>/etc/bash.bashrc
+    echo 'export PERL5LIB=$PERL5LIB:/usr/local/mysql-sandbox/lib/'>>/etc/bash.bashrc
+    echo 'export SANDBOXES_HOME=/usr/local/demos/sb'>>/etc/bash.bashrc
+    echo 'export SANDBOX_HOME=/usr/local/demos/'>>/etc/bash.bashrc
     rm -f /tmp/mysql-sandbox.tar.gz
     popd
 }
@@ -47,15 +50,20 @@ test -d /usr/local/5.5.27/ || {
 
 test -d /usr/local/demos/ || {
     pushd /tmp/
-    git clone https://github.com/fipar/vagrant_pt_demos
-    cp -rv vagrant_pt_demos/demos /usr/local 
-    chown -R vagrant.vagrant /usr/local/demos/
+    git clone https://github.com/markusalbe/vagrant_pt_demos
+    cp -rv vagrant_pt_demos/demos /usr/local
+    chown -v -R vagrant.vagrant /usr/local/demos/
     echo 'export PATH=$PATH:/usr/local/demos/'>>/etc/bash.bashrc
     rm -rf /tmp/vagrant_pt_demos
     popd
 }
-
+# we need these here, or run /etc/bash.bashrc, since that is not run before the line below
+# export PATH=$PATH:/usr/local/percona-server/bin:/usr/local/mysql-sandbox/bin:/usr/local/demos/:/usr/local/mysql-sandbox/
+# export PERL5LIB=$PERL5LIB:/usr/local/mysql-sandbox/lib/
+# export SANDBOXES_HOME=/usr/local/demos/sb
+# export SANDBOX_HOME=/usr/local/demos/
 # if at least one sandbox exists, I assume all of them do
-[ -d /usr/local/demos/sb/master-active/ ] || su - vagrant -c "/usr/local/demos/create-sandboxes.sh"
+# [ -d /usr/local/demos/sb/master-active/ ] || su --preserve-environment --login - vagrant -c "/usr/local/demos/create-sandboxes.sh"
 
 echo '. /usr/local/demos/create-sandboxes.inc.sh' >> /home/vagrant/.bashrc
+echo '. /usr/local/demos/create-sandboxes.sh' >> /home/vagrant/.bashrc

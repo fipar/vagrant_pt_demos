@@ -4,6 +4,7 @@
 # set DEMOS_HOME to the place where the demos/ subdirectory lives in your host. As I plan to run this from that dir, I'll just set it to $PWD
 export DEMOS_HOME=/usr/local/demos
 # change this if you want, this is where sandboxes will be created
+export SANDBOX_HOME="$DEMOS_HOME/";
 export SANDBOXES_HOME="$DEMOS_HOME/sb";
 # set this to the path where your MySQL version lives. A MySQL binary directory should recide under this path (i.e. /usr/local/5.5.27)
 export BINARY_BASE="/usr/local"
@@ -41,6 +42,9 @@ create_demo_box () {
 	extra="$extra --my_clause=${1}"
 	shift
     done
+
+    echo "sandboxes home: $SANDBOXES_HOME";
+
     make_sandbox  5.5.27 -- \
         --upper_directory="$SANDBOXES_HOME" --sandbox_directory="$box_name" --no_ver_after_name \
         --no_show --sandbox_port=$box_port --db_user=demo --db_password=demo --repl_user=demo --repl_password=demo \
@@ -63,8 +67,8 @@ create_demo_box () {
 reinit_instances()
 {
     for i in `ls $SANDBOXES_HOME`; do
-	restore_datadir $i
-    done    
+        restore_datadir $i
+    done
 }
 
 # backs up a sandbox's datadir
@@ -73,9 +77,22 @@ backup_datadir()
 {
     [ -n "$1" ] || die "I need a sandbox name to restore"
     [ -d "$SANDBOXES_HOME" ] && {
-	mkdir -p $DEMOS_HOME/assets/loaded-datadir/$1/
-	cp -rv $SANDBOXES_HOME/$1/data/ $DEMOS_HOME/assets/loaded-datadir/$1
+        mkdir -p $DEMOS_HOME/assets/loaded-datadir/$1/
+        cp -rv $SANDBOXES_HOME/$1/data/ $DEMOS_HOME/assets/loaded-datadir/$1; echo "created backup of $1 in $DEMOS_HOME/assets/loaded-datadir/$1";
     }
+}
+
+backup_generic_datadir()
+{
+    SB="${SANDBOXES_HOME}/${1:-master-active}"
+    GENERIC_DATADIR=$DEMOS_HOME/assets/loaded-datadir/generic
+
+    [ -d "$SB/data" ] || die "reference datadir ($SB/data) doesn't exists"
+    [ -d /proc/$(cat $SB/data/mysql_sandbox*.pid 2>/dev/null >/dev/null) ] && $SB/stop
+    [ -d "$GENERIC_DATADIR" ] && rm -rf $GENERIC_DATADIR; echo "removed old generic datadir";
+
+    cp -a $SB/data/ $GENERIC_DATADIR; echo "created generic datadir in $GENERIC_DATADIR using $SB/data";
+    $SB/start
 }
 
 # restore a sandbox's datadir, then starts it
@@ -85,20 +102,31 @@ restore_datadir()
     [ -n "$1" ] || die "I need a sandbox name to restore"
     [ -d "$SANDBOXES_HOME" ] && {
 	[ -d /proc/$(cat $SANDBOXES_HOME/$1/data/mysql_sandbox*.pid 2>/dev/null >/dev/null) ] && $SANDBOXES_HOME/$1/stop
-	cp -rv $DEMOS_HOME/assets/loaded-datadir/$1/data/* $SANDBOXES_HOME/$1/data/ 
-	$SANDBOXES_HOME/$1/restart
+        cp -rv $DEMOS_HOME/assets/loaded-datadir/$1/data/* $SANDBOXES_HOME/$1/data/; echo "restored $1 with datadir from $DEMOS_HOME/assets/loaded-datadir/$1/data/";
+        $SANDBOXES_HOME/$1/start
     }
 }
 
+restore_generic_datadir ()
+{
+    [ -n "$1" ] || die "I need a sandbox name to restore"
+    GENERIC_DATADIR=$DEMOS_HOME/assets/loaded-datadir/generic/
+    SB="$SANDBOXES_HOME/$1"
+    [ -d "$GENERIC_DATADIR" ] || die "generic datadir ($GENERIC_DATADIR) doesn't exists"
+    [ -d /proc/$(cat $SB/data/mysql_sandbox*.pid 2>/dev/null >/dev/null) ] && $SB/stop
+    zap_datadir $1 "purge"
+    cp -a $GENERIC_DATADIR $SB/data/; echo "restored $1 with generic datadir ($GENERIC_DATADIR)";
+}
 
 # stops a sandbox and clears its datadir
 # $1 : sandbox
 zap_datadir()
 {
-    [ -n "$1" ] || die "I need a sandbox name to zap"    
+    [ -n "$1" ] || die "I need a sandbox name to zap"
     [ -d $SANDBOXES_HOME ] && {
 	[ -d /proc/$(cat $SANDBOXES_HOME/$1/data/mysql_sandbox*.pid 2>/dev/null >/dev/null) ] && $SANDBOXES_HOME/$1/stop
-	rm -rf $SANDBOXES_HOME/$1/data/*
+        rm -rf $SANDBOXES_HOME/$1/data/*; echo "zapped $SANDBOXES_HOME/$1/data/"
+        [ "$2" == "purge" ] && rmdir -v $SANDBOXES_HOME/$1/data/;
     }
 }
 
@@ -108,12 +136,11 @@ demo_recipes_boxes_reset_data_and_replication () {
     then
         kill_mysql
         for i in `ls $SANDBOXES_HOME`; do {
-	    echo -n "initializing instance $i ... "
-	    zap_datadir $i
-	    echo "done"
-	    echo -n "restoring $i from binary backup ... "
-	    restore_datadir $i
-	    echo "done"
+            echo -n "initializing instance $i ... "
+            zap_datadir $i "purge"
+            echo "restoring $i from binary backup ... "
+            restore_generic_datadir $i
+            echo "done"
         } done;
         demo_recipes_boxes_set_replication;
     else
@@ -140,34 +167,37 @@ load_sample_databases() {
     SAMPLES_DIR=$DEMOS_HOME/assets/sample-databases/
     SB=$SANDBOXES_HOME/$1/use
 
-[ -x $SB ] || die "Can't find ./use script for sandbox $1"
+    [ -x $SB ] || die "Can't find ./use script for sandbox $1"
 
-# I'm assuming that if the employees_db-full file is there, the others are too
-[ -f $SAMPLES_DIR/employees_db-full-1.0.6.tar.bz2 ] || {
+    # I'm assuming that if the employees_db-full file is there, the others are too
+    [ -f $SAMPLES_DIR/employees_db-full-1.0.6.tar.bz2 ] || {
+        [ -d "$SAMPLES_DIR" ] || mkdir -p $SAMPLES_DIR;
+        cd $SAMPLES_DIR;
 
-[ -d "$SAMPLES_DIR" ] || mkdir -p $SAMPLES_DIR;
-    cd $SAMPLES_DIR;
+        wget --progress=bar -c https://launchpad.net/test-db/employees-db-1/1.0.6/+download/employees_db-full-1.0.6.tar.bz2;
+        wget --progress=bar -c http://downloads.mysql.com/docs/world.sql.gz;
+        wget --progress=bar -c http://downloads.mysql.com/docs/world_innodb.sql.gz;
+        wget --progress=bar -c http://downloads.mysql.com/docs/sakila-db.tar.gz;
 
-    wget --progress=bar -c https://launchpad.net/test-db/employees-db-1/1.0.6/+download/employees_db-full-1.0.6.tar.bz2;
-    wget --progress=bar -c http://downloads.mysql.com/docs/world.sql.gz;
-    wget --progress=bar -c http://downloads.mysql.com/docs/world_innodb.sql.gz;
-    wget --progress=bar -c http://downloads.mysql.com/docs/sakila-db.tar.gz;
+        tar xjvf employees_db-full-1.0.6.tar.bz2;
+        gunzip world.sql.gz;
+        gunzip world_innodb.sql.gz;
+        tar xzvf sakila-db.tar.gz;
+    }
 
-    tar xjvf employees_db-full-1.0.6.tar.bz2;
-    gunzip world.sql.gz;
-    gunzip world_innodb.sql.gz;
-    tar xzvf sakila-db.tar.gz;
-    
-}
-
-    # Once again, assuming that if the employees data dir is there, then the data is present. 
+    # Once again, assuming that if the employees data dir is there, then the data is present.
     [ -d $SANDBOXES_HOME/$1/data/employees/ ] || {
-        # needs to be there to use employees.sql 
-	cd $SAMPLES_DIR/employees_db/
-	$SB < $SAMPLES_DIR/employees_db/employees.sql
-	$SB < $SAMPLES_DIR/sakila-db/sakila-schema.sql
-	$SB < $SAMPLES_DIR/sakila-db/sakila-data.sql
-	$SB < $SAMPLES_DIR/world.sql
-	$SB < $SAMPLES_DIR/world_innodb.sql
+        # needs to be there to use employees.sql
+        cd $SAMPLES_DIR/employees_db/
+        $SB < $SAMPLES_DIR/employees_db/employees.sql
+
+        $SB < $SAMPLES_DIR/sakila-db/sakila-schema.sql
+        $SB < $SAMPLES_DIR/sakila-db/sakila-data.sql
+
+        $SB -e "CREATE DATABASE IF NOT EXISTS world_myisam";
+        $SB world_myisam < $SAMPLES_DIR/world.sql\
+
+        $SB -e "CREATE DATABASE IF NOT EXISTS world";
+        $SB world < $SAMPLES_DIR/world_innodb.sql
     }
 }

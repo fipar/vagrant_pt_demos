@@ -1,6 +1,6 @@
 #!/bin/bash
 # Authored by Marcos Albe (markus.albe@gmail.com). Minor edits by Fernando Ipar (fipar@acm.org)
-set -x
+# set -x
 # set DEMOS_HOME to the place where the demos/ subdirectory lives in your host. As I plan to run this from that dir, I'll just set it to $PWD
 export DEMOS_HOME=/usr/local/demos
 # change this if you want, this is where sandboxes will be created
@@ -92,7 +92,7 @@ stop_instance ()
     [ -n "$1" ] || die "I need a sandbox name to stop"
     SB=$SANDBOXES_HOME/$1
     [ -d "$SB/data" ] || die "given sandbox ($1) doesn't exists or is incomplete"
-    [ -d /proc/$(cat $SB/data/mysql_sandbox*.pid 2>/dev/null >/dev/null) ] && $SB/stop;
+    [ -d /proc/$(cat $SB/data/mysql_sandbox*.pid 2>/dev/null >/dev/null) ] && $SB/my sqladmin shutdown;
     echo "stopped $1"
 }
 

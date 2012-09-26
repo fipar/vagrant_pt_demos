@@ -45,7 +45,9 @@ create_demo_box () {
         shift
     done
 
+    echo ""
     echo "creating $box_name";
+    echo "============================="
 
     make_sandbox  5.5.27 -- \
         --upper_directory="$SANDBOXES_HOME" --sandbox_directory="$box_name" --no_ver_after_name \
@@ -81,7 +83,6 @@ start_instance ()
     [ -n "$1" ] || die "I need a sandbox name to start"
     SB=$SANDBOXES_HOME/$1
     [ -d "$SB/data" ] || die "given sandbox ($1) doesn't exists or is incomplete"
-    [ -d /proc/$(cat $SB/data/mysql_sandbox*.pid 2>/dev/null >/dev/null) ] && $SB/stop;
     $SB/start;
     echo "started $1"
 }
@@ -92,7 +93,8 @@ stop_instance ()
     [ -n "$1" ] || die "I need a sandbox name to stop"
     SB=$SANDBOXES_HOME/$1
     [ -d "$SB/data" ] || die "given sandbox ($1) doesn't exists or is incomplete"
-    [ -d /proc/$(cat $SB/data/mysql_sandbox*.pid 2>/dev/null >/dev/null) ] && $SB/my sqladmin shutdown;
+    SB_PID=$(cat $SB/data/mysql_sandbox*.pid)
+    [ -d /proc/$SB_PID ] && [ "`ps --format comm --no-heading --pid $SB_PID`" == "mysqld" ] && $SB/my sqladmin shutdown
     echo "stopped $1"
 }
 
@@ -112,7 +114,9 @@ backup_datadir()
 
 backup_generic_datadir()
 {
+    echo ""
     echo "creating generic backup..."
+    echo "=========================="
     SB_NAME="${1:-master-active}"
     SB="${SANDBOXES_HOME}/${SB_NAME}"
     GENERIC_DATADIR=$DEMOS_HOME/assets/loaded-datadir/generic
@@ -175,7 +179,9 @@ demo_recipes_boxes_reset_data_and_replication () {
     then
         kill_mysql
         for i in `ls $SANDBOXES_HOME`; do {
+            echo "";
             echo "restoring $i from binary backup ... "
+            echo "===================================="
             restore_generic_datadir $i
         } done;
         demo_recipes_boxes_set_replication;
@@ -186,13 +192,15 @@ demo_recipes_boxes_reset_data_and_replication () {
 
 # initializes slave threads on all sandboxes
 demo_recipes_boxes_set_replication () {
+    echo "";
     echo "setting replication...";
+    echo "======================";
     STOP_SLAVE_SQL="SLAVE STOP;"
     CHANGE_MASTER_COMMON_SQL="CHANGE MASTER TO MASTER_HOST='127.0.0.1', MASTER_USER='demo', MASTER_PASSWORD='demo', MASTER_LOG_POS=107"
-    START_SLAVE_SQL="SLAVE START; SELECT SLEEP(0.5); SHOW SLAVE STATUS\G SHOW MASTER STATUS; SHOW SLAVE HOSTS;"
+    START_SLAVE_SQL="SLAVE START; SELECT SLEEP(0.5); SHOW SLAVE STATUS\G"
 
-    $SANDBOXES_HOME/master-active/use -v -t -e "$STOP_SLAVE_SQL $CHANGE_MASTER_COMMON_SQL, MASTER_LOG_FILE='master-passive-bin.000001', MASTER_PORT=13307;  $START_SLAVE_SQL";
-    $SANDBOXES_HOME/master-passive/use -v -t -e "$STOP_SLAVE_SQL $CHANGE_MASTER_COMMON_SQL, MASTER_LOG_FILE='master-active-bin.000001', MASTER_PORT=13306;  $START_SLAVE_SQL";
+    $SANDBOXES_HOME/master-active/use -v -t -e "$STOP_SLAVE_SQL $CHANGE_MASTER_COMMON_SQL, MASTER_LOG_FILE='master-passive-bin.000001', MASTER_PORT=13307;  $START_SLAVE_SQL SHOW MASTER STATUS; SHOW SLAVE HOSTS;";
+    $SANDBOXES_HOME/master-passive/use -v -t -e "$STOP_SLAVE_SQL $CHANGE_MASTER_COMMON_SQL, MASTER_LOG_FILE='master-active-bin.000001', MASTER_PORT=13306;  $START_SLAVE_SQL SHOW MASTER STATUS; SHOW SLAVE HOSTS;";
     $SANDBOXES_HOME/slave-1/use -v -t -e "$STOP_SLAVE_SQL $CHANGE_MASTER_COMMON_SQL, MASTER_LOG_FILE='master-active-bin.000001', MASTER_PORT=13306;  $START_SLAVE_SQL";
     $SANDBOXES_HOME/slave-2/use -v -t -e "$STOP_SLAVE_SQL $CHANGE_MASTER_COMMON_SQL, MASTER_LOG_FILE='master-passive-bin.000001', MASTER_PORT=13307;  $START_SLAVE_SQL";
 }
@@ -200,7 +208,9 @@ demo_recipes_boxes_set_replication () {
 # loads the sample databases into a sandbox
 # $1 sandbox name
 load_sample_databases() {
+    echo ""
     echo "loading samples..."
+    echo "=================="
     SAMPLES_DIR=$DEMOS_HOME/assets/sample-databases/
     SB=$SANDBOXES_HOME/$1/use
 

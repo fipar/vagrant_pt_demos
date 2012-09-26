@@ -1,6 +1,6 @@
 #!/bin/bash
 # Authored by Marcos Albe (markus.albe@gmail.com). Minor edits by Fernando Ipar (fipar@acm.org)
-
+set -x
 # set DEMOS_HOME to the place where the demos/ subdirectory lives in your host. As I plan to run this from that dir, I'll just set it to $PWD
 export DEMOS_HOME=/usr/local/demos
 # change this if you want, this is where sandboxes will be created
@@ -15,7 +15,7 @@ export LANGUAGE=en_US.UTF-8
 
 export PTBIN="$DEMOS_HOME/bin/";
 
-export VERBOSEDEMO="-v"
+export VERBOSEDEMO=""
 
 kill_mysql()
 {
@@ -58,10 +58,12 @@ create_demo_box () {
         --my_clause="log-bin=${box_name}-bin" \
         --my_clause="binlog-format=STATEMENT" \
         --my_clause="skip-slave-start" \
-        --my_clause="report-host=127.0.0.1" \
+        --my_clause="report-host=$box_name" \
         --my_clause="report-port=$box_port" \
         --my_clause="server-id=$box_port" \
         $extra
+
+    sudo sed --in-place=.demo.bak "s/127\.0\.0\.1/127.0.0.1 ${box_name} /g" /etc/hosts
 }
 
 
@@ -148,8 +150,10 @@ restore_generic_datadir ()
     [ -d "$GENERIC_DATADIR" ] || die "generic datadir ($GENERIC_DATADIR) doesn't exists"
     stop_instance $1
     zap_datadir $1
+    echo "copying files from $GENERIC_DATADIR to $GENERIC_DATADIR $SB/data/"
     cp $VERBOSEDEMO -a $GENERIC_DATADIR $SB/data/;
     echo "restored $1 with generic datadir ($GENERIC_DATADIR)";
+    start_instance $1
 }
 
 # stops a sandbox and clears its datadir

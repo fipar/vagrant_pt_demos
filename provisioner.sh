@@ -21,7 +21,7 @@ EOF
 
 }
 
-apt-get -y install percona-toolkit git-core libaio1
+apt-get -y install percona-toolkit git-core libaio1 build-essential
 
 # install mysql-sandbox and percona-server-5.5 binary
 
@@ -29,7 +29,7 @@ rm -vrf /usr/local/mysql-sandbox/
 rm -vrf /usr/local/demos/
 
 test -d /usr/local/mysql-sandbox/ || {
-    wget --progress=bar https://launchpad.net/mysql-sandbox/mysql-sandbox-3/mysql-sandbox-3/+download/MySQL-Sandbox-3.0.25.tar.gz -O /tmp/mysql-sandbox.tar.gz
+    wget --progress=bar:force https://launchpad.net/mysql-sandbox/mysql-sandbox-3/mysql-sandbox-3/+download/MySQL-Sandbox-3.0.25.tar.gz -O /tmp/mysql-sandbox.tar.gz
     tar xzvf /tmp/mysql-sandbox.tar.gz -C /usr/local/ --transform "s/MySQL-Sandbox-3.0.25/mysql-sandbox/g"
     pushd /usr/local/mysql-sandbox/
     perl Makefile.PL PREFIX=/usr/local/mysql-sandbox
@@ -45,7 +45,7 @@ test -d /usr/local/mysql-sandbox/ || {
 }
 
 test -d /usr/local/5.5.27/ || {
-    wget --progress=bar http://www.percona.com/redir/downloads/Percona-Server-5.5/Percona-Server-5.5.27-28.1/binary/linux/x86_64/Percona-Server-5.5.27-rel28.1-296.Linux.x86_64.tar.gz -O /tmp/percona-server.tar.gz
+    wget --progress=bar:force http://www.percona.com/redir/downloads/Percona-Server-5.5/Percona-Server-5.5.27-28.1/binary/linux/x86_64/Percona-Server-5.5.27-rel28.1-296.Linux.x86_64.tar.gz -O /tmp/percona-server.tar.gz
     tar xzvf /tmp/percona-server.tar.gz -C /usr/local --transform "s/Percona-Server-5.5.27-rel28.1-296.Linux.x86_64/5.5.27/g"
     echo 'export PATH=$PATH:/usr/local/percona-server/bin'>>/etc/bash.bashrc
     rm -f /tmp/percona-server.tar.gz

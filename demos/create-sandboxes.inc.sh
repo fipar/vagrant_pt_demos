@@ -1,6 +1,6 @@
 #!/bin/bash
 # Authored by Marcos Albe (markus.albe@gmail.com). Minor edits by Fernando Ipar (fipar@acm.org)
-# set -x
+set -x
 # set DEMOS_HOME to the place where the demos/ subdirectory lives in your host. As I plan to run this from that dir, I'll just set it to $PWD
 export DEMOS_HOME=/usr/local/demos
 # change this if you want, this is where sandboxes will be created
@@ -154,7 +154,7 @@ restore_generic_datadir ()
     [ -d "$GENERIC_DATADIR" ] || die "generic datadir ($GENERIC_DATADIR) doesn't exists"
     stop_instance $1
     zap_datadir $1
-    echo "copying files from $GENERIC_DATADIR to $GENERIC_DATADIR $SB/data/"
+    echo "copying files from $GENERIC_DATADIR to $SB/data/"
     cp $VERBOSEDEMO -a $GENERIC_DATADIR $SB/data/;
     echo "restored $1 with generic datadir ($GENERIC_DATADIR)";
     start_instance $1

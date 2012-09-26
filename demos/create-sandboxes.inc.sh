@@ -15,6 +15,8 @@ export LANGUAGE=en_US.UTF-8
 
 export PTBIN="$DEMOS_HOME/bin/";
 
+export VERBOSEDEMO="-v"
+
 kill_mysql()
 {
     echo "Killing any remaining mysqld instance"
@@ -39,11 +41,11 @@ create_demo_box () {
     shift; shift
     extra="";
     while [ -n "$1" ]; do
-	extra="$extra --my_clause=${1}"
-	shift
+        extra="$extra --my_clause=${1}"
+        shift
     done
 
-    echo "sandboxes home: $SANDBOXES_HOME";
+    echo "creating $box_name";
 
     make_sandbox  5.5.27 -- \
         --upper_directory="$SANDBOXES_HOME" --sandbox_directory="$box_name" --no_ver_after_name \
@@ -71,76 +73,106 @@ reinit_instances()
     done
 }
 
+start_instance ()
+{
+    echo "starting instance ($1)"
+    [ -n "$1" ] || die "I need a sandbox name to start"
+    SB=$SANDBOXES_HOME/$1
+    [ -d "$SB/data" ] || die "given sandbox ($1) doesn't exists or is incomplete"
+    [ -d /proc/$(cat $SB/data/mysql_sandbox*.pid 2>/dev/null >/dev/null) ] && $SB/stop;
+    $SB/start;
+    echo "started $1"
+}
+
+stop_instance ()
+{
+    echo "stopping instance ($1)"
+    [ -n "$1" ] || die "I need a sandbox name to stop"
+    SB=$SANDBOXES_HOME/$1
+    [ -d "$SB/data" ] || die "given sandbox ($1) doesn't exists or is incomplete"
+    [ -d /proc/$(cat $SB/data/mysql_sandbox*.pid 2>/dev/null >/dev/null) ] && $SB/stop;
+    echo "stopped $1"
+}
+
 # backs up a sandbox's datadir
 # $1 : sandbox we want to backup
 backup_datadir()
 {
+    echo "creating backup..."
     [ -n "$1" ] || die "I need a sandbox name to restore"
-    [ -d "$SANDBOXES_HOME" ] && {
-        mkdir -p $DEMOS_HOME/assets/loaded-datadir/$1/
-        cp -rv $SANDBOXES_HOME/$1/data/ $DEMOS_HOME/assets/loaded-datadir/$1; echo "created backup of $1 in $DEMOS_HOME/assets/loaded-datadir/$1";
+    [ -d "$SANDBOXES_HOME/$1/data/" ] && {
+        mkdir $VERBOSEDEMO -p $DEMOS_HOME/assets/loaded-datadir/$1/
+        stop_instance $1
+        cp $VERBOSEDEMO -r $SANDBOXES_HOME/$1/data/ $DEMOS_HOME/assets/loaded-datadir/$1;
+        echo "created backup of $1 in $DEMOS_HOME/assets/loaded-datadir/$1";
     }
 }
 
 backup_generic_datadir()
 {
-    SB="${SANDBOXES_HOME}/${1:-master-active}"
+    echo "creating generic backup..."
+    SB_NAME="${1:-master-active}"
+    SB="${SANDBOXES_HOME}/${SB_NAME}"
     GENERIC_DATADIR=$DEMOS_HOME/assets/loaded-datadir/generic
 
     [ -d "$SB/data" ] || die "reference datadir ($SB/data) doesn't exists"
-    [ -d /proc/$(cat $SB/data/mysql_sandbox*.pid 2>/dev/null >/dev/null) ] && $SB/stop
-    [ -d "$GENERIC_DATADIR" ] && rm -rf $GENERIC_DATADIR; echo "removed old generic datadir";
+    [ -d "$GENERIC_DATADIR" ] && rm $VERBOSEDEMO -rf $GENERIC_DATADIR;
+    echo "removed old generic datadir";
 
-    cp -a $SB/data/ $GENERIC_DATADIR; echo "created generic datadir in $GENERIC_DATADIR using $SB/data";
-    $SB/start
+    stop_instance $SB_NAME
+    cp $VERBOSEDEMO -a $SB/data/ $GENERIC_DATADIR;
+    echo "created generic datadir in $GENERIC_DATADIR using $SB/data";
+    start_instance $SB_NAME
 }
 
 # restore a sandbox's datadir, then starts it
 # $1 : sandbox we want to restore
 restore_datadir()
 {
+    echo "restoring datadir..."
     [ -n "$1" ] || die "I need a sandbox name to restore"
-    [ -d "$SANDBOXES_HOME" ] && {
-	[ -d /proc/$(cat $SANDBOXES_HOME/$1/data/mysql_sandbox*.pid 2>/dev/null >/dev/null) ] && $SANDBOXES_HOME/$1/stop
-        cp -rv $DEMOS_HOME/assets/loaded-datadir/$1/data/* $SANDBOXES_HOME/$1/data/; echo "restored $1 with datadir from $DEMOS_HOME/assets/loaded-datadir/$1/data/";
-        $SANDBOXES_HOME/$1/start
+    [ -d "$SANDBOXES_HOME/$1/" ] && {
+        stop_instance $1
+        cp $VERBOSEDEMO -r $DEMOS_HOME/assets/loaded-datadir/$1/data/ $SANDBOXES_HOME/$1/data/;
+        echo "restored $1 with datadir from $DEMOS_HOME/assets/loaded-datadir/$1/data/";
+        start_instance $1
     }
 }
 
 restore_generic_datadir ()
 {
+    echo "restoring generic datadir..."
     [ -n "$1" ] || die "I need a sandbox name to restore"
     GENERIC_DATADIR=$DEMOS_HOME/assets/loaded-datadir/generic/
     SB="$SANDBOXES_HOME/$1"
     [ -d "$GENERIC_DATADIR" ] || die "generic datadir ($GENERIC_DATADIR) doesn't exists"
-    [ -d /proc/$(cat $SB/data/mysql_sandbox*.pid 2>/dev/null >/dev/null) ] && $SB/stop
-    zap_datadir $1 "purge"
-    cp -a $GENERIC_DATADIR $SB/data/; echo "restored $1 with generic datadir ($GENERIC_DATADIR)";
+    stop_instance $1
+    zap_datadir $1
+    cp $VERBOSEDEMO -a $GENERIC_DATADIR $SB/data/;
+    echo "restored $1 with generic datadir ($GENERIC_DATADIR)";
 }
 
 # stops a sandbox and clears its datadir
 # $1 : sandbox
 zap_datadir()
 {
+    echo "removing datadir..."
     [ -n "$1" ] || die "I need a sandbox name to zap"
-    [ -d $SANDBOXES_HOME ] && {
-	[ -d /proc/$(cat $SANDBOXES_HOME/$1/data/mysql_sandbox*.pid 2>/dev/null >/dev/null) ] && $SANDBOXES_HOME/$1/stop
-        rm -rf $SANDBOXES_HOME/$1/data/*; echo "zapped $SANDBOXES_HOME/$1/data/"
-        [ "$2" == "purge" ] && rmdir -v $SANDBOXES_HOME/$1/data/;
-    }
+    [ -d $SANDBOXES_HOME/$1/data ] || die "nothing to remove in $SANDBOXES_HOME/$1/data"
+
+	stop_instance $1
+    rm $VERBOSEDEMO -rf $SANDBOXES_HOME/$1/data/; echo "zapped $SANDBOXES_HOME/$1/data/"
 }
 
 # reinitializes all sandboxes for replication tests
 demo_recipes_boxes_reset_data_and_replication () {
+    echo "resetting all sanboxes"
     if [ -d "$SANDBOXES_HOME" ];
     then
         kill_mysql
         for i in `ls $SANDBOXES_HOME`; do {
-            echo -n "initializing instance $i ... "
-            zap_datadir $i "purge"
             echo "restoring $i from binary backup ... "
             restore_generic_datadir $i
-            echo "done"
         } done;
         demo_recipes_boxes_set_replication;
     else
@@ -150,6 +182,7 @@ demo_recipes_boxes_reset_data_and_replication () {
 
 # initializes slave threads on all sandboxes
 demo_recipes_boxes_set_replication () {
+    echo "setting replication...";
     STOP_SLAVE_SQL="SLAVE STOP;"
     CHANGE_MASTER_COMMON_SQL="CHANGE MASTER TO MASTER_HOST='127.0.0.1', MASTER_USER='demo', MASTER_PASSWORD='demo', MASTER_LOG_POS=107"
     START_SLAVE_SQL="SLAVE START; SELECT SLEEP(0.5); SHOW SLAVE STATUS\G SHOW MASTER STATUS; SHOW SLAVE HOSTS;"
@@ -163,7 +196,7 @@ demo_recipes_boxes_set_replication () {
 # loads the sample databases into a sandbox
 # $1 sandbox name
 load_sample_databases() {
-# https://launchpad.net/test-db/
+    echo "loading samples..."
     SAMPLES_DIR=$DEMOS_HOME/assets/sample-databases/
     SB=$SANDBOXES_HOME/$1/use
 
@@ -171,7 +204,7 @@ load_sample_databases() {
 
     # I'm assuming that if the employees_db-full file is there, the others are too
     [ -f $SAMPLES_DIR/employees_db-full-1.0.6.tar.bz2 ] || {
-        [ -d "$SAMPLES_DIR" ] || mkdir -p $SAMPLES_DIR;
+        [ -d "$SAMPLES_DIR" ] || mkdir $VERBOSEDEMO -p $SAMPLES_DIR;
         cd $SAMPLES_DIR;
 
         wget --progress=bar -c https://launchpad.net/test-db/employees-db-1/1.0.6/+download/employees_db-full-1.0.6.tar.bz2;
@@ -200,4 +233,5 @@ load_sample_databases() {
         $SB -e "CREATE DATABASE IF NOT EXISTS world";
         $SB world < $SAMPLES_DIR/world_innodb.sql
     }
+    echo "done loading samples"
 }

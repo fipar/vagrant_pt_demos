@@ -11,7 +11,6 @@ read -p"Create demo sandboxes y/n?" -N1 -t15
     [ -d "$DEMOS_HOME" ] || mkdir -v $DEMOS_HOME;
     # demos_list="pt-find pt-kill pt-tcp-model pt-ioprofile pt-pmp pt-align pt-log-player pt-online-schema-change pt-mysql-summary pt-config-diff pt-variable-advisor pt-duplicate-key-checker pt-mext"
 
-
     kill_mysql
 
     rm -rf $SANDBOXES_HOME
@@ -25,7 +24,7 @@ read -p"Create demo sandboxes y/n?" -N1 -t15
     create_demo_box "slave-1" 13308 read-only=1;
     create_demo_box "slave-2" 13309 read-only=1;
 
-    $SANDBOXES_HOME/master-active/start;
+    start_instance "master-active"
     load_sample_databases "master-active";
     backup_generic_datadir;
 

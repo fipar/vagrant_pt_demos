@@ -67,6 +67,7 @@ test -d /usr/local/demos/ || {
 # export SANDBOX_HOME=/usr/local/demos/
 # if at least one sandbox exists, I assume all of them do
 # [ -d /usr/local/demos/sb/master-active/ ] || su --preserve-environment --login - vagrant -c "/usr/local/demos/create-sandboxes.sh"
-
+cp -vf /etc/skel/.bashrc /home/vagrant/
+chown vagrant.vagrant /home/vagrant/.bashrc
 echo '. /usr/local/demos/create-sandboxes.inc.sh' >> /home/vagrant/.bashrc
 echo '. /usr/local/demos/create-sandboxes.sh' >> /home/vagrant/.bashrc

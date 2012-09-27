@@ -203,6 +203,8 @@ demo_recipes_boxes_set_replication () {
     $SANDBOXES_HOME/master-passive/use -v -t -e "$STOP_SLAVE_SQL $CHANGE_MASTER_COMMON_SQL, MASTER_LOG_FILE='master-active-bin.000001', MASTER_PORT=13306;  $START_SLAVE_SQL SHOW MASTER STATUS; SHOW SLAVE HOSTS;";
     $SANDBOXES_HOME/slave-1/use -v -t -e "$STOP_SLAVE_SQL $CHANGE_MASTER_COMMON_SQL, MASTER_LOG_FILE='master-active-bin.000001', MASTER_PORT=13306;  $START_SLAVE_SQL";
     $SANDBOXES_HOME/slave-2/use -v -t -e "$STOP_SLAVE_SQL $CHANGE_MASTER_COMMON_SQL, MASTER_LOG_FILE='master-passive-bin.000001', MASTER_PORT=13307;  $START_SLAVE_SQL";
+
+    pt-slave-find --defaults-file=$SANDBOXES_HOME/master-active/my.sandbox.cnf --recursion-method=hosts
 }
 
 # loads the sample databases into a sandbox

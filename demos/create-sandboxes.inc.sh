@@ -1,6 +1,6 @@
 #!/bin/bash
 # Authored by Marcos Albe (markus.albe@gmail.com). Minor edits by Fernando Ipar (fipar@acm.org)
-set -x
+# set -x
 # set DEMOS_HOME to the place where the demos/ subdirectory lives in your host. As I plan to run this from that dir, I'll just set it to $PWD
 export DEMOS_HOME=/usr/local/demos
 # change this if you want, this is where sandboxes will be created
@@ -176,7 +176,7 @@ zap_datadir()
 demo_recipes_boxes_reset_data_and_replication () {
     echo "resetting all sanboxes"
     if [ -d "$SANDBOXES_HOME" ];
-    then
+    then {
         kill_mysql
         for i in `ls $SANDBOXES_HOME`; do {
             echo "";
@@ -185,9 +185,9 @@ demo_recipes_boxes_reset_data_and_replication () {
             restore_generic_datadir $i
         } done;
         demo_recipes_boxes_set_replication;
-    else
+    } else {
         $DEMOS_HOME/create-sandboxes.sh;
-    fi
+    } fi
 }
 
 # initializes slave threads on all sandboxes

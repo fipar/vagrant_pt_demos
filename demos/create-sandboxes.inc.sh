@@ -181,7 +181,7 @@ demo_recipes_boxes_reset_data_and_replication () {
         for i in `ls $SANDBOXES_HOME`; do {
             echo "";
             echo "restoring $i from binary backup ... "
-            echo "===================================="
+            echo "==============================================="
             restore_generic_datadir $i
         } done;
         demo_recipes_boxes_set_replication;
@@ -244,10 +244,11 @@ load_sample_databases() {
         $SB < $SAMPLES_DIR/sakila-db/sakila-data.sql
 
         $SB -e "CREATE DATABASE IF NOT EXISTS world_myisam";
-        $SB world_myisam < $SAMPLES_DIR/world.sql\
+        $SB world_myisam < $SAMPLES_DIR/world.sql
 
         $SB -e "CREATE DATABASE IF NOT EXISTS world";
         $SB world < $SAMPLES_DIR/world_innodb.sql
     }
     echo "done loading samples"
+    cd -
 }

@@ -3,7 +3,8 @@
 # Creates the sandboxes used for demos (stopping them and removing their contents first if needed), loading the sample datasets into them.
 # DISCLAIMER: This SIGKILLs any running mysqld instance, removes datadirs, and has no test cases. Use only on test systems.
 
-read -p"Create demo sandboxes y/n?" -N1 -t15
+read -p"Create demo sandboxes y/N? " -N1 -t15
+echo "";
 
 [ "$REPLY" == "y" ] && {
 
@@ -26,9 +27,12 @@ read -p"Create demo sandboxes y/n?" -N1 -t15
 
     start_instance "master-active"
     load_sample_databases "master-active";
+    $SANDBOXES_HOME/master-active/use -e "RESET MASTER";
     backup_generic_datadir;
 
     demo_recipes_boxes_reset_data_and_replication
+
+    cd $DEMOS_HOME;
 
     # for i in `ls $SANDBOXES_HOME`; do
     #    $SANDBOXES_HOME/$i/start

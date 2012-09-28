@@ -2,13 +2,11 @@
 # Authored by Marcos Albe (markus.albe@gmail.com). Minor edits by Fernando Ipar (fipar@acm.org)
 # Creates the sandboxes used for demos (stopping them and removing their contents first if needed), loading the sample datasets into them.
 # DISCLAIMER: This SIGKILLs any running mysqld instance, removes datadirs, and has no test cases. Use only on test systems.
+. /usr/local/demos/create-sandboxes.inc.sh;
 
-read -p"Create demo sandboxes y/N? " -N1 -t15
-echo "";
+pause_msg "Create demo sandboxes y/N? "
 
 [ "$REPLY" == "y" ] && {
-
-    . /usr/local/demos/create-sandboxes.inc.sh;
     [ -d "$DEMOS_HOME" ] || mkdir -v $DEMOS_HOME;
     # demos_list="pt-find pt-kill pt-tcp-model pt-ioprofile pt-pmp pt-align pt-log-player pt-online-schema-change pt-mysql-summary pt-config-diff pt-variable-advisor pt-duplicate-key-checker pt-mext"
 
@@ -28,6 +26,7 @@ echo "";
     start_instance "master-active"
     load_sample_databases "master-active";
     $SANDBOXES_HOME/master-active/use -e "RESET MASTER";
+    $SANDBOXES_HOME/master-active/use -e "CREATE DATABASE IF NOT EXISTS percona;";
     backup_generic_datadir;
 
     demo_recipes_boxes_reset_data_and_replication

@@ -17,6 +17,20 @@ export PTBIN="$DEMOS_HOME/bin/";
 
 export VERBOSEDEMO=""
 
+
+export master_active="$SANDBOXES_HOME/master-active/";
+export master_passive="$SANDBOXES_HOME/master-passive/";
+export slave_1="$SANDBOXES_HOME/slave-1/";
+export slave_2="$SANDBOXES_HOME/slave-2/";
+
+
+pause_msg () {
+    msg=$1
+    [ -n "$2" ] && timeout="-t $2";
+    read -p "$msg  (press enter to continue...) " -N1 $timeout;
+    echo ""
+}
+
 kill_mysql()
 {
     echo "Killing any remaining mysqld instance"
@@ -138,7 +152,7 @@ restore_datadir()
     echo "restoring datadir..."
     [ -n "$1" ] || die "I need a sandbox name to restore"
     [ -d "$SANDBOXES_HOME/$1/" ] && {
-        stop_instance $1
+        zap_datadir $1
         cp $VERBOSEDEMO -r $DEMOS_HOME/assets/loaded-datadir/$1/data/ $SANDBOXES_HOME/$1/data/;
         echo "restored $1 with datadir from $DEMOS_HOME/assets/loaded-datadir/$1/data/";
         start_instance $1
@@ -152,7 +166,6 @@ restore_generic_datadir ()
     GENERIC_DATADIR=$DEMOS_HOME/assets/loaded-datadir/generic/
     SB="$SANDBOXES_HOME/$1"
     [ -d "$GENERIC_DATADIR" ] || die "generic datadir ($GENERIC_DATADIR) doesn't exists"
-    stop_instance $1
     zap_datadir $1
     echo "copying files from $GENERIC_DATADIR to $SB/data/"
     cp $VERBOSEDEMO -a $GENERIC_DATADIR $SB/data/;
@@ -251,4 +264,20 @@ load_sample_databases() {
     }
     echo "done loading samples"
     cd -
+}
+
+
+
+poison_slaves ()
+{
+    echo "Poisoning slaves"
+    $slave_2/use -v -v -v -t -e "INSERT INTO world.Country VALUES ('DYO', 'Duchy of Young', 'South America', 'South America', 40, 1837, 15797, 75.2, 20831, 19967, 'Young', 'Monarchy', 'Grand Duke Ignacio Nin', 3492, 'YO')";
+    $slave_1/use -v -v -v -t -e "INSERT INTO world.City VALUES (NULL, 'Las Flores', 'URY', 'Maldonado', 200)";
+}
+
+checksum_slaves ()
+{
+    echo "Running pt-table-checksum"
+    pt-table-checksum --defaults-file=$DEMOS_HOME/assets/.my.cnf --replicate=percona.checksums --create-replicate-table --empty-replicate-table --replicate-check  h=127.0.0.1,P=13306,u=demo,p=demo
+    pt-table-checksum --defaults-file=$DEMOS_HOME/assets/.my.cnf --replicate=percona.checksums --replicate-check --replicate-check-only h=127.0.0.1,P=13306,u=demo,p=demo
 }

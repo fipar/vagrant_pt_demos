@@ -8,8 +8,10 @@
 
 [ "$1" == "reset-boxes" ] && demo_recipes_boxes_reset_data_and_replication;
 
+pause_msg "Running checksum demo"
+
 set -x
-# defaults file should work (https://bugs.launchpad.net/percona-toolkit/+bug/1046329) but doesn't :P
+
 $master_active/use -v -t -e "CREATE DATABASE IF NOT EXISTS percona;";
 checksum_slaves
 set +x

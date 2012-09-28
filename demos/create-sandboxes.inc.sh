@@ -17,6 +17,8 @@ export PTBIN="$DEMOS_HOME/bin/";
 
 export VERBOSEDEMO=""
 
+export bold=`tput smso`
+export normal=`tput rmso`
 
 export master_active="$SANDBOXES_HOME/master-active/";
 export master_passive="$SANDBOXES_HOME/master-passive/";
@@ -27,7 +29,7 @@ export slave_2="$SANDBOXES_HOME/slave-2/";
 pause_msg () {
     msg=$1
     [ -n "$2" ] && timeout="-t $2";
-    read -p "$msg  (press enter to continue...) " -N1 $timeout;
+    read -p "${bold} $msg  (press enter to continue...) ${normal}" -N1 $timeout;
     echo ""
 }
 
@@ -77,7 +79,10 @@ create_demo_box () {
         --my_clause="report-host=$box_name" \
         --my_clause="report-port=$box_port" \
         --my_clause="server-id=$box_port" \
+        --my_clause="max-connections=500" \
         $extra
+
+    # --my_clause="innodb_thread_concurrency=6" \
 
     sudo sed --in-place=.demo.bak "s/127\.0\.0\.1/127.0.0.1 ${box_name} /g" /etc/hosts
 }
@@ -270,14 +275,69 @@ load_sample_databases() {
 
 poison_slaves ()
 {
+    set -x
     echo "Poisoning slaves"
+    set +x
     $slave_2/use -v -v -v -t -e "INSERT INTO world.Country VALUES ('DYO', 'Duchy of Young', 'South America', 'South America', 40, 1837, 15797, 75.2, 20831, 19967, 'Young', 'Monarchy', 'Grand Duke Ignacio Nin', 3492, 'YO')";
     $slave_1/use -v -v -v -t -e "INSERT INTO world.City VALUES (NULL, 'Las Flores', 'URY', 'Maldonado', 200)";
+    set -x
 }
 
 checksum_slaves ()
 {
+    set -x
     echo "Running pt-table-checksum"
-    pt-table-checksum --defaults-file=$DEMOS_HOME/assets/.my.cnf --replicate=percona.checksums --create-replicate-table --empty-replicate-table --replicate-check  h=127.0.0.1,P=13306,u=demo,p=demo
-    pt-table-checksum --defaults-file=$DEMOS_HOME/assets/.my.cnf --replicate=percona.checksums --replicate-check --replicate-check-only h=127.0.0.1,P=13306,u=demo,p=demo
+    set +x
+    pt-table-checksum --ignore-databases=employees --replicate=percona.checksums --create-replicate-table --empty-replicate-table --replicate-check  h=127.0.0.1,P=13306,u=demo,p=demo
+    pt-table-checksum --ignore-databases=employees --replicate=percona.checksums --replicate-check --replicate-check-only h=127.0.0.1,P=13306,u=demo,p=demo
+    set -x
+}
+
+enable_slow_log ()
+{
+    set -x
+    [ -n "$1" ] || die "I need a sandbox name to configure"
+    echo "enabling slow log for $1..."
+    SB=$SANDBOXES_HOME/$1/use
+    $SB -v -t -e "SET GLOBAL slow_query_log=1";
+    $SB -v -t -e "SET GLOBAL slow_query_log_timestamp_always=1";
+    $SB -v -t -e "SET GLOBAL slow_query_log_timestamp_precision=microsecond";
+    $SB -v -t -e "SET GLOBAL slow_query_log_use_global_control=long_query_time,log_slow_verbosity";
+    $SB -v -t -e "SET GLOBAL log_slow_slave_statements=1";
+    $SB -v -t -e "SET GLOBAL log_slow_verbosity=full";
+    $SB -v -t -e "SET GLOBAL long_query_time=0";
+    show_slow_log_settings $1
+}
+
+disable_slow_log ()
+{
+    set -x
+    [ -n "$1" ] || die "I need a sandbox name to configure"
+    echo "disabling slow log for $1..."
+    SB=$SANDBOXES_HOME/$1/use
+    $SB -v -t -e "SET GLOBAL slow_query_log=0";
+    $SB -v -t -e "SET GLOBAL slow_query_log_timestamp_always=0";
+    $SB -v -t -e "SET GLOBAL slow_query_log_timestamp_precision=second";
+    $SB -v -t -e "SET GLOBAL slow_query_log_use_global_control=all'";
+    $SB -v -t -e "SET GLOBAL log_slow_slave_statements=0";
+    $SB -v -t -e "SET GLOBAL log_slow_verbosity=''";
+    $SB -v -t -e "SET GLOBAL long_query_time=1";
+    show_slow_log_settings $1
+}
+
+show_slow_log_settings () {
+    set -x
+    [ -n "$1" ] || die "I need a sandbox name to configure"
+    echo "slow log settings from $1..."
+    SB=$SANDBOXES_HOME/$1/use
+    $SB -v -t -e "SELECT @@global.slow_query_log_timestamp_always, @@global.slow_query_log_timestamp_precision, @@global.slow_query_log_use_global_control, @@global.long_query_time, @@global.log_slow_verbosity, @@global.log_slow_slave_statements\G"
+}
+
+slap_it () {
+    set -x
+    [ -n "$1" ] || die "I need a sandbox name to slap"
+    echo "slapping $1..."
+    SB=$SANDBOXES_HOME/$1
+    set +x
+    mysqlslap --defaults-file=$SB/my.sandbox.cnf --concurrency=1,25,50,100,200 --iterations=20 --create-schema=employees --auto-generate-sql --engine=innodb  --auto-generate-sql-load-type=mixed --auto-generate-sql-write-number=300  --number-of-queries=1000
 }

@@ -68,7 +68,7 @@ create_demo_box () {
     make_sandbox  5.5.27 -- \
         --upper_directory="$SANDBOXES_HOME" --sandbox_directory="$box_name" --no_ver_after_name \
         --no_show --sandbox_port=$box_port --db_user=demo --db_password=demo --repl_user=demo --repl_password=demo \
-        --my_clause="innodb_buffer_pool_size=128M" \
+        --my_clause="innodb_buffer_pool_size=256M" \
         --my_clause="innodb_log_file_size=64M" \
         --my_clause="innodb_file_per_table" \
         --my_clause="innodb_fast_shutdown=2" \
@@ -339,5 +339,18 @@ slap_it () {
     echo "slapping $1..."
     SB=$SANDBOXES_HOME/$1
     set +x
-    mysqlslap --defaults-file=$SB/my.sandbox.cnf --concurrency=1,25,50,100,200 --iterations=20 --create-schema=employees --auto-generate-sql --engine=innodb  --auto-generate-sql-load-type=mixed --auto-generate-sql-write-number=300  --number-of-queries=1000
+    date +"%F %T"
+    mysqlslap \
+        --defaults-file=$SB/my.sandbox.cnf \
+        --concurrency=25 \
+        --iterations=5 \
+        --create-schema=employees \
+        --auto-generate-sql \
+        --engine=innodb \
+        --auto-generate-sql-unique-query-number=500 \
+        --auto-generate-sql-load-type=update \
+        --auto-generate-sql-write-number=200 \
+        --auto-generate-sql-write-number=500 \
+        --number-of-queries=1000
+    date +"%F %T"
 }

@@ -21,7 +21,11 @@ EOF
 
 }
 
-apt-get -y install percona-toolkit git-core libaio1 build-essential
+# wget -c http://download.virtualbox.org/virtualbox/4.2.0/VBoxGuestAdditions_4.2.0.iso
+
+/etc/init.d/vboxadd setup
+
+apt-get -y --force-yes install git-core build-essential libaio1 percona-toolkit
 
 # install mysql-sandbox and percona-server-5.5 binary
 
@@ -60,6 +64,16 @@ test -d /usr/local/demos/ || {
     rm -rf /tmp/vagrant_pt_demos
     popd
 }
+
+cd /vagrant/demos/;
+mkdir /usr/local/demos/_tmp;
+for i in `ls *.sh`; do {
+    mv -v /usr/local/demos/$i /usr/local/demos/_tmp/;
+    ln -v -s /vagrant/demos/$i /usr/local/demos/;
+} done;
+
+
+
 # we need these here, or run /etc/bash.bashrc, since that is not run before the line below
 # export PATH=$PATH:/usr/local/percona-server/bin:/usr/local/mysql-sandbox/bin:/usr/local/demos/:/usr/local/mysql-sandbox/
 # export PERL5LIB=$PERL5LIB:/usr/local/mysql-sandbox/lib/
@@ -71,3 +85,6 @@ cp -vf /etc/skel/.bashrc /home/vagrant/
 chown vagrant.vagrant /home/vagrant/.bashrc
 echo '. /usr/local/demos/create-sandboxes.inc.sh' >> /home/vagrant/.bashrc
 echo '. /usr/local/demos/create-sandboxes.sh' >> /home/vagrant/.bashrc
+
+
+echo "0" > /proc/sys/vm/swappiness

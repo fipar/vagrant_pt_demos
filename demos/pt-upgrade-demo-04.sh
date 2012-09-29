@@ -5,11 +5,21 @@
 # - all servers are in-sync
 . /usr/local/demos/create-sandboxes.inc.sh
 
-pause_msg "We'll first enable slow log and produce some traffic with mysqlslap"
+pause_msg "We'll now stop replication between masters, and use them to demonstrate pt-upgrade
+We'll introduce a configuratoin change in one of the masters, which should produce noticeable difference"
+
+$master_active/use -v -t -e "STOP SLAVE";
+$master_passive/use -v -t -e "STOP SLAVE";
+
+set_flush_at_trx "master-passive" 1
 
 
 
-enable_slow_log "master-active";
+
+
+
+
+
 
 since=`date +"%F %T"`
 slap_it "master-active";

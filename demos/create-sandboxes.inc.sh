@@ -348,9 +348,65 @@ slap_it () {
         --create-schema=employees \
         --auto-generate-sql \
         --engine=innodb \
-        --auto-generate-sql-unique-query-number=300 \
-        --auto-generate-sql-load-type=update \
+        --auto-generate-sql-unique-query-number=180 \
+        --auto-generate-sql-execute-number=
+        --auto-generate-sql-load-type=mixed \
         --auto-generate-sql-write-number=300 \
         --auto-generate-sql-write-number=300 \
-        --number-of-queries=3000
+        --number-of-queries=1800 &
+}
+
+sysbench_it () {
+    set -x
+    [ -n "$1" ] || die "I need a sandbox name to slap"
+    echo "sysbench'ing $1..."
+    SB=$SANDBOXES_HOME/$1
+    SB_SOCKET=`grep "socket" $SB/my.sandbox.cnf |tail -n1 |awk -F"=" '{ print $2 }' |awk '{ print $1 }'`;
+
+    # $SB/use -v -t -e "DROP DATABASE IF EXISTS sbtest; CREATE DATABASE IF NOT EXISTS sbtest"
+
+    # seems to give good results, commenting while testing other stuff 500QPS
+    # + sysbench --test=/usr/local/demos/assets/sysbench/oltp.lua --report-interval=5 --oltp_tables_count=4 --oltp-table-size=250000 --oltp-read-only=off --oltp-range-size=8000 --oltp-index-updates=6 --oltp-dist-type=STRING --rand-init=on --rand-type=pareto --mysql-socket=/tmp/mysql_sandbox13306.sock --mysql-user=demo --mysql-password=demo --num-threads=8 --max-time=120 --max-requests=0 --percentile=99 run
+
+    # this gives contention headaches everywhere 300QPS; awesome display for pt-query-digest
+    #    SYSBENCH="sysbench --test=$DEMOS_HOME/assets/sysbench/oltp.lua  --report-interval=5 \
+    #                --oltp_tables_count=4 --oltp-table-size=400000 --oltp-dist-type=special --oltp-read-only=off \
+    #                 --oltp-range-size=9000 --oltp-index-updates=6 --oltp-order-ranges=3  \
+    #                --rand-init=on  --rand-type=pareto \
+    #                --mysql-socket=$SB_SOCKET --mysql-user=demo --mysql-password=demo \
+    #                --num-threads=16 --max-time=120 --max-requests=0 --percentile=99"
+
+
+    SYSBENCH="sysbench --test=$DEMOS_HOME/assets/sysbench/oltp.lua  --report-interval=5 \
+                --oltp_tables_count=1 --oltp-table-size=1250000 --oltp-dist-type=special --oltp-read-only=off \
+                --oltp-range-size=15000 --oltp-index-updates=10 --oltp-order-ranges=10  --oltp-distinct-ranges=10 \
+                --rand-init=on  --rand-type=pareto \
+                --mysql-socket=$SB_SOCKET --mysql-user=demo --mysql-password=demo \
+                --num-threads=4 --max-time=120 --max-requests=0 --percentile=99"
+
+    # time $SYSBENCH prepare;
+    $SYSBENCH run
+
+}
+
+trace_it () {
+    SB=${1:-"master-active"};
+    strace -p `cat /usr/local/demos/sb/$SB/data/mysql_sandbox13306.pid` -f -c
+}
+
+set_flush_at_trx () {
+     set -x
+    [ -n "$1" ] || die "I need a sandbox name to config"
+    SB=$SANDBOXES_HOME/$1
+    $SB/use -v -t -e "SET GLOBAL innodb_flush_log_at_trx_commit=$2;";
+
+}
+
+rotate_slow_log () {
+     set -x
+    [ -n "$1" ] || die "I need a sandbox name to rotate it's slow log"
+    SB=$SANDBOXES_HOME/$1;
+    cp -v  $SB/data/lucid64-slow.log /tmp/$1-slow-log.`date +%s`
+    rm -v -f $SB/data/lucid64-slow.log
+    $SB/use -v -t -e "FLUSH LOGS"
 }

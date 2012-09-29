@@ -245,7 +245,9 @@ load_sample_databases() {
         wget --progress=bar -c http://downloads.mysql.com/docs/world.sql.gz;
         wget --progress=bar -c http://downloads.mysql.com/docs/world_innodb.sql.gz;
         wget --progress=bar -c http://downloads.mysql.com/docs/sakila-db.tar.gz;
+    }
 
+    [ -d $SAMPLES_DIR/employees_db/ ] || {
         tar xjvf employees_db-full-1.0.6.tar.bz2;
         gunzip world.sql.gz;
         gunzip world_innodb.sql.gz;

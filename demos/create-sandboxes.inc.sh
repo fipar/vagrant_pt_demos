@@ -363,8 +363,6 @@ sysbench_it () {
     SB=$SANDBOXES_HOME/$1
     SB_SOCKET=`grep "socket" $SB/my.sandbox.cnf |tail -n1 |awk -F"=" '{ print $2 }' |awk '{ print $1 }'`;
 
-    # $SB/use -v -t -e "DROP DATABASE IF EXISTS sbtest; CREATE DATABASE IF NOT EXISTS sbtest"
-
     # seems to give good results, commenting while testing other stuff 500QPS
     # + sysbench --test=/usr/local/demos/assets/sysbench/oltp.lua --report-interval=5 --oltp_tables_count=4 --oltp-table-size=250000 --oltp-read-only=off --oltp-range-size=8000 --oltp-index-updates=6 --oltp-dist-type=STRING --rand-init=on --rand-type=pareto --mysql-socket=/tmp/mysql_sandbox13306.sock --mysql-user=demo --mysql-password=demo --num-threads=8 --max-time=120 --max-requests=0 --percentile=99 run
 
@@ -378,13 +376,14 @@ sysbench_it () {
 
 
     SYSBENCH="sysbench --test=$DEMOS_HOME/assets/sysbench/oltp.lua  --report-interval=5 \
-                --oltp_tables_count=1 --oltp-table-size=1250000 --oltp-dist-type=special --oltp-read-only=off \
-                --oltp-range-size=15000 --oltp-index-updates=10 --oltp-order-ranges=10  --oltp-distinct-ranges=10 \
+                --oltp_tables_count=4 --oltp-table-size=250000 --oltp-dist-type=special --oltp-read-only=off \
+                --oltp-range-size=6000 --oltp-index-updates=10 --oltp_non_index_updates=40 --oltp-order-ranges=3  --oltp-distinct-ranges=3 \
                 --rand-init=on  --rand-type=pareto \
                 --mysql-socket=$SB_SOCKET --mysql-user=demo --mysql-password=demo \
-                --num-threads=4 --max-time=120 --max-requests=0 --percentile=99"
+                --num-threads=6 --max-time=90 --max-requests=0 --percentile=99"
 
-    # time $SYSBENCH prepare;
+    $SB/use -v -t -e "DROP DATABASE IF EXISTS sbtest; CREATE DATABASE IF NOT EXISTS sbtest"
+    time $SYSBENCH prepare;
     $SYSBENCH run
 
 }

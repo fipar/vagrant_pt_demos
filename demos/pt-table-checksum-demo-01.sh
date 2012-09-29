@@ -11,7 +11,6 @@
 pause_msg "Running checksum demo"
 
 set -x
-
 $master_active/use -v -t -e "CREATE DATABASE IF NOT EXISTS percona;";
 checksum_slaves
 set +x

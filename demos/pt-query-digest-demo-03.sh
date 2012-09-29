@@ -15,7 +15,8 @@ since=`date +"%F %T"`
 sysbench_it "master-active";
 until=`date +"%F %T"`
 
-slow_log=`$master_active/use -B -N -e "SELECT @@global.slow_query_log_file";`
+# slow_log=`$master_active/use -B -N -e "SELECT @@global.slow_query_log_file";`
+slow_log=$(get_slow_log_filename "master-active")
 
 
 

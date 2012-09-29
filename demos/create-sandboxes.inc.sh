@@ -1,7 +1,4 @@
 #!/bin/bash
-
-# http://emptysquare.net/blog/moving-virtualbox-and-vagrant-to-an-external-drive/
-
 # Authored by Marcos Albe (markus.albe@gmail.com). Minor edits by Fernando Ipar (fipar@acm.org)
 # set -x
 # set DEMOS_HOME to the place where the demos/ subdirectory lives in your host. As I plan to run this from that dir, I'll just set it to $PWD
@@ -72,7 +69,7 @@ create_demo_box () {
         --upper_directory="$SANDBOXES_HOME" --sandbox_directory="$box_name" --no_ver_after_name \
         --no_show --sandbox_port=$box_port --db_user=demo --db_password=demo --repl_user=demo --repl_password=demo \
         --my_clause="innodb_buffer_pool_size=128M" \
-        --my_clause="innodb_log_file_size=128M" \
+        --my_clause="innodb_log_file_size=10M" \
         --my_clause="innodb_file_per_table" \
         --my_clause="innodb_fast_shutdown=2" \
         --my_clause="innodb_flush_log_at_trx_commit=2" \
@@ -380,7 +377,7 @@ sysbench_it () {
                 --oltp-range-size=6000 --oltp-index-updates=10 --oltp_non_index_updates=40 --oltp-order-ranges=3  --oltp-distinct-ranges=3 \
                 --rand-init=on  --rand-type=pareto \
                 --mysql-socket=$SB_SOCKET --mysql-user=demo --mysql-password=demo \
-                --num-threads=6 --max-time=90 --max-requests=0 --percentile=99"
+                --num-threads=6 --max-time=30 --max-requests=0 --percentile=99"
 
     $SB/use -v -t -e "DROP DATABASE IF EXISTS sbtest; CREATE DATABASE IF NOT EXISTS sbtest"
     time $SYSBENCH prepare;
@@ -404,8 +401,14 @@ set_flush_at_trx () {
 rotate_slow_log () {
      set -x
     [ -n "$1" ] || die "I need a sandbox name to rotate it's slow log"
-    SB=$SANDBOXES_HOME/$1;
-    cp -v  $SB/data/lucid64-slow.log /tmp/$1-slow-log.`date +%s`
-    rm -v -f $SB/data/lucid64-slow.log
+    ORIGINAL=$(get_slow_log_filename "$1")
+    MOVED=/tmp/$1-slow-log.`date +%s`
+    cp -v  $ORIGINAL $MOVED;
+    rm -v -f $ORIGINAL
     $SB/use -v -t -e "FLUSH LOGS"
+}
+
+get_slow_log_filename () {
+    $SANDBOXES_HOME/$1/use -B -N -e "SELECT @@global.slow_query_log_file";
+    # $SANDBOXES_HOME/$1/data/lucid64-slow.log
 }

@@ -21,10 +21,9 @@ EOF
 
 }
 
-# wget -c http://download.virtualbox.org/virtualbox/4.2.0/VBoxGuestAdditions_4.2.0.iso
-
 /etc/init.d/vboxadd setup
 
+# /vagrant is where you cloned the git project (/home/you/vagrant_pt_demos/ for example)
 export usb=/vagrant/usb/;
 apt_no_download=""
 test -d "$usb" && {
@@ -36,10 +35,10 @@ test -d "$usb" && {
     apt_no_download="--no-download"
 }
 
-apt-get -y --force-yes ${apt_no_download} install git-core bzr sysstat build-essential autoconf automake libtool libaio1 percona-toolkit libmysqlclient18-dev
+apt-get -y --force-yes ${apt_no_download} install git-core bzr sysstat build-essential autoconf automake libtool libaio1 percona-toolkit perl-doc libmysqlclient18-dev
 # install mysql-sandbox and percona-server-5.5 binary
 
-sleep 30
+sleep 3
 
 rm -vrf /usr/local/mysql-sandbox/
 rm -vrf /usr/local/demos/
@@ -67,6 +66,18 @@ test -d /usr/local/5.5.27/ || {
     rm -f /tmp/percona-server.tar.gz
 }
 
+test -d /tmp/sysbench || {
+    cd /tmp
+    pushd /tmp
+    bzr branch lp:sysbench
+
+    cd /tmp/sysbench
+    pushd /tmp/sysbench
+    ./autogen.sh
+    ./configure && make
+}
+cd /tmp/sysbench
+make install
 
 test -d /usr/local/demos/ || {
     pushd /tmp/
@@ -76,29 +87,18 @@ test -d /usr/local/demos/ || {
     echo 'export PATH=$PATH:/usr/local/demos/'>>/etc/bash.bashrc
     rm -rf /tmp/vagrant_pt_demos
     popd
-}
 
-test -d /usr/local/demos/assets/sysbench || {
     # wget -c http://ufpr.dl.sourceforge.net/project/sysbench/sysbench/0.4.12/sysbench-0.4.12.tar.gz -O /tmp/sysbench-0.4.12.tar.gz
     # sudo tar xzvf /tmp/sysbench-0.4.12.tar.gz -C /tmp --transform "s/sysbench-0.4.12/sysbench/g"
     # sed --in-place=.bak "s/AC_PROG_LIBTOOL/\#AC_PROG_LIBTOOL\nAC_PROG_RANLIB/g" configure.ac
 
-    test -d /tmp/sysbench || {
-        cd /tmp
-        pushd /tmp
-        bzr branch lp:sysbench
 
-        cd /tmp/sysbench
-        pushd /tmp/sysbench
-        ./autogen.sh
-        ./configure && make
+    mkdir -p /usr/local/demos/assets/
+    test -d $usb/sample-databases && {
+        cp -a $usb/sample-databases /usr/local/demos/assets/
     }
-    cd /tmp/sysbench
-    make install
 
-    # rm -rf /tmp/sysbench
-
-    mkdir -p /usr/local/demos/assets/sysbench
+    mkdir /usr/local/demos/assets/sysbench
     if [ -d $usb/sysbench-tests/ ];
     then {
         cp -v $usb/sysbench-tests/* /usr/local/demos/assets/sysbench
@@ -118,7 +118,6 @@ test -d /usr/local/demos/assets/sysbench || {
         wget -c --progress=bar:force http://bazaar.launchpad.net/~percona-dev/percona-benchmark-result/sysbench.oltp.intel520/download/vadim%40percona.com-20120511183144-dksld1z0qqzmgcwu/update_non_index.lua-20120511183137-pyv3pzq9ubh0o3ee-220/update_non_index.lua
     } fi
     chown --recursive vagrant.vagrant /usr/local/demos/sysbench
-
 }
 
 
@@ -144,6 +143,5 @@ cp -vf /etc/skel/.bashrc /home/vagrant/
 chown vagrant.vagrant /home/vagrant/.bashrc
 echo '. /usr/local/demos/create-sandboxes.inc.sh' >> /home/vagrant/.bashrc
 echo '. /usr/local/demos/create-sandboxes.sh' >> /home/vagrant/.bashrc
-
 
 echo "0" > /proc/sys/vm/swappiness

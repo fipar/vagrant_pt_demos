@@ -11,10 +11,11 @@ Vagrant::Config.run do |config|
 
   # set up cpu exec cap so that Virtualbox doesn't kill my notebook
   config.vm.customize do |vm|
-  	vm.memory_size = 256
+  	vm.memory_size = 1024
   	vm.name = "Percona Toolkit Demos"
-  	vm.cpu_execution_cap = 60
+  	vm.cpu_execution_cap = 80
   end
+  config.vm.customize ["modifyvm", :id, "--memory", 1024]
 
   config.vm.provision :shell, :path => "provisioner.sh"
 

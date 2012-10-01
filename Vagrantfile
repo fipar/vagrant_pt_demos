@@ -10,10 +10,11 @@ Vagrant::Config.run do |config|
   config.vm.box = "lucid64"
 
   # set up cpu exec cap so that Virtualbox doesn't kill my notebook
+  # feel free to change memory_size and cpu_execution_cap based on your HW
   config.vm.customize do |vm|
-  	vm.memory_size = 1024
+  	vm.memory_size = 512
   	vm.name = "Percona Toolkit Demos"
-  	vm.cpu_execution_cap = 80
+  	vm.cpu_execution_cap = 50
   end
   config.vm.customize ["modifyvm", :id, "--memory", 1024]
 

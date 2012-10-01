@@ -69,7 +69,7 @@ create_demo_box () {
         --upper_directory="$SANDBOXES_HOME" --sandbox_directory="$box_name" --no_ver_after_name \
         --no_show --sandbox_port=$box_port --db_user=demo --db_password=demo --repl_user=demo --repl_password=demo \
         --my_clause="innodb_buffer_pool_size=128M" \
-        --my_clause="innodb_log_file_size=10M" \
+        --my_clause="innodb_log_file_size=128M" \
         --my_clause="innodb_file_per_table" \
         --my_clause="innodb_fast_shutdown=2" \
         --my_clause="innodb_flush_log_at_trx_commit=2" \
@@ -236,11 +236,12 @@ load_sample_databases() {
 
     [ -x $SB ] || die "Can't find ./use script for sandbox $1"
 
+    [ -d "$SAMPLES_DIR" ] || mkdir $VERBOSEDEMO -p $SAMPLES_DIR;
+    cd $SAMPLES_DIR;
+
     # I'm assuming that if the employees_db-full file is there, the others are too
     [ -f $SAMPLES_DIR/employees_db-full-1.0.6.tar.bz2 ] || {
-        [ -d "$SAMPLES_DIR" ] || mkdir $VERBOSEDEMO -p $SAMPLES_DIR;
-        cd $SAMPLES_DIR;
-
+        
         wget --progress=bar -c https://launchpad.net/test-db/employees-db-1/1.0.6/+download/employees_db-full-1.0.6.tar.bz2;
         wget --progress=bar -c http://downloads.mysql.com/docs/world.sql.gz;
         wget --progress=bar -c http://downloads.mysql.com/docs/world_innodb.sql.gz;
@@ -249,9 +250,10 @@ load_sample_databases() {
 
     [ -d $SAMPLES_DIR/employees_db/ ] || {
         tar xjvf employees_db-full-1.0.6.tar.bz2;
-        gunzip world.sql.gz;
-        gunzip world_innodb.sql.gz;
         tar xzvf sakila-db.tar.gz;
+        [ -f world.sql.gz ] && gunzip world.sql.gz;
+        [ -f world_innodb.sql.gz ] && gunzip world_innodb.sql.gz;
+
     }
 
     # Once again, assuming that if the employees data dir is there, then the data is present.
@@ -360,6 +362,26 @@ sysbench_it () {
     [ -n "$1" ] || die "I need a sandbox name to slap"
     echo "sysbench'ing $1..."
     SB=$SANDBOXES_HOME/$1
+
+    $SB/use -v -t -e "DROP DATABASE IF EXISTS sbtest; CREATE DATABASE IF NOT EXISTS sbtest"
+    echo "preparing sysbench tests..."
+    time sysbench_action "prepare";
+    
+    echo "silently doing bad things to the sbtest1 table..." 
+    $SB/use -e "ALTER TABLE sbtest.sbtest1 MODIFY COLUMN c TEXT"
+    
+    echo "starting sysbench tests..."
+    
+    sysbench "prepare"
+    
+    sysbench "run"
+}
+
+sysbench_action () {
+    set -x
+    [ -n "$1" ] || die "I need a sandbox name to slap"
+    SB=$SANDBOXES_HOME/$1
+    ACTION=${2:-"run"}
     SB_SOCKET=`grep "socket" $SB/my.sandbox.cnf |tail -n1 |awk -F"=" '{ print $2 }' |awk '{ print $1 }'`;
 
     # seems to give good results, commenting while testing other stuff 500QPS
@@ -373,18 +395,24 @@ sysbench_it () {
     #                --mysql-socket=$SB_SOCKET --mysql-user=demo --mysql-password=demo \
     #                --num-threads=16 --max-time=120 --max-requests=0 --percentile=99"
 
-
+    # this produces deadlocks; good for triggering pt-stalk 
     SYSBENCH="sysbench --test=$DEMOS_HOME/assets/sysbench/oltp.lua  --report-interval=5 \
                 --oltp_tables_count=4 --oltp-table-size=250000 --oltp-dist-type=special --oltp-read-only=off \
-                --oltp-range-size=6000 --oltp-index-updates=10 --oltp_non_index_updates=40 --oltp-order-ranges=3  --oltp-distinct-ranges=3 \
+                --oltp-range-size=2000 --oltp-index-updates=100 --oltp_non_index_updates=10 --oltp-order-ranges=3  --oltp-distinct-ranges=3 \
                 --rand-init=on  --rand-type=pareto \
                 --mysql-socket=$SB_SOCKET --mysql-user=demo --mysql-password=demo \
-                --num-threads=6 --max-time=30 --max-requests=0 --percentile=99"
+                --num-threads=40 --max-time=45 --max-requests=0 --percentile=99"
 
+    SYSBENCH="sysbench --test=$DEMOS_HOME/assets/sysbench/oltp.lua  --report-interval=5 \
+                --oltp_tables_count=1 --oltp-table-size=600000 --oltp-dist-type=special --oltp-read-only=off \
+                --oltp-range-size=1000 --oltp-index-updates=2 --oltp_non_index_updates=2 --oltp-order-ranges=2  --oltp-distinct-ranges=2 \
+                --rand-init=on  --rand-type=pareto \
+                --mysql-socket=$SB_SOCKET --mysql-user=demo --mysql-password=demo \
+                --num-threads=30 --max-time=45 --max-requests=0 --percentile=99"
+                
+                
     $SB/use -v -t -e "DROP DATABASE IF EXISTS sbtest; CREATE DATABASE IF NOT EXISTS sbtest"
-    time $SYSBENCH prepare;
-    $SYSBENCH run
-
+    time $SYSBENCH $ACTION;
 }
 
 trace_it () {
@@ -407,7 +435,7 @@ rotate_slow_log () {
     MOVED=/tmp/$1-slow-log.`date +%s`
     cp -v  $ORIGINAL $MOVED;
     rm -v -f $ORIGINAL
-    $SB/use -v -t -e "FLUSH LOGS"
+    $SANDBOXES_HOME/$1/use -v -t -e "FLUSH LOGS"
 }
 
 get_slow_log_filename () {

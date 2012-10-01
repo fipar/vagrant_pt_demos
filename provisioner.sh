@@ -62,7 +62,7 @@ test -d /usr/local/mysql-sandbox/ || {
 test -d /usr/local/5.5.27/ || {
     wget -c --progress=bar:force http://www.percona.com/redir/downloads/Percona-Server-5.5/Percona-Server-5.5.27-28.1/binary/linux/x86_64/Percona-Server-5.5.27-rel28.1-296.Linux.x86_64.tar.gz -O /tmp/percona-server.tar.gz
     tar xzf /tmp/percona-server.tar.gz -C /usr/local --transform "s/Percona-Server-5.5.27-rel28.1-296.Linux.x86_64/5.5.27/g"
-    echo 'export PATH=$PATH:/usr/local/percona-server/bin'>>/etc/bash.bashrc
+    echo 'export PATH=$PATH:/usr/local/5.5.27/bin'>>/etc/bash.bashrc
     rm -f /tmp/percona-server.tar.gz
 }
 
@@ -92,6 +92,7 @@ test -d /usr/local/demos/ || {
     # sudo tar xzvf /tmp/sysbench-0.4.12.tar.gz -C /tmp --transform "s/sysbench-0.4.12/sysbench/g"
     # sed --in-place=.bak "s/AC_PROG_LIBTOOL/\#AC_PROG_LIBTOOL\nAC_PROG_RANLIB/g" configure.ac
 
+    test -d /usr/local/demos/output || mkdir /usr/local/demos/output
 
     mkdir -p /usr/local/demos/assets/
     test -d $usb/sample-databases && {
@@ -117,7 +118,7 @@ test -d /usr/local/demos/ || {
         wget -c --progress=bar:force http://bazaar.launchpad.net/~percona-dev/percona-benchmark-result/sysbench.oltp.intel520/download/vadim%40percona.com-20120511183144-dksld1z0qqzmgcwu/update_index.lua-20120511183137-pyv3pzq9ubh0o3ee-219/update_index.lua
         wget -c --progress=bar:force http://bazaar.launchpad.net/~percona-dev/percona-benchmark-result/sysbench.oltp.intel520/download/vadim%40percona.com-20120511183144-dksld1z0qqzmgcwu/update_non_index.lua-20120511183137-pyv3pzq9ubh0o3ee-220/update_non_index.lua
     } fi
-    chown --recursive vagrant.vagrant /usr/local/demos/sysbench
+    chown --recursive vagrant.vagrant /usr/local/demos/
 }
 
 
@@ -125,12 +126,12 @@ cd /vagrant/demos/;
 # mkdir /usr/local/demos/_from-git/;
 for i in `ls *.sh`; do {
     # mv -v /usr/local/demos/$i /usr/local/demos/_from-git/;
-    rm -v /usr/local/demos/$i
+    [ -f /usr/local/demos/$i ] && rm -v /usr/local/demos/$i
     ln -v -s /vagrant/demos/$i /usr/local/demos/;
     chmod +x /usr/local/demos/$i
 } done;
 
-
+cd /usr/local/demos
 
 # we need these here, or run /etc/bash.bashrc, since that is not run before the line below
 # export PATH=$PATH:/usr/local/percona-server/bin:/usr/local/mysql-sandbox/bin:/usr/local/demos/:/usr/local/mysql-sandbox/
